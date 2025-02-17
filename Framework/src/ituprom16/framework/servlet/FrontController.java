@@ -1,53 +1,49 @@
 package ituprom16.framework.servlet;
 
+import ituprom16.framework.annotation.AnnotationController;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.File;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import ituprom16.framework.annotation.AnnotationController;
+import java.io.File;
+import javax.servlet.ServletConfig;
 
 public class FrontController extends HttpServlet {
+    private List<String> controllerNames;
     private String controllerPackage;
-    private List<Class<?>> controllers = new ArrayList<>();
     
     @Override
-    public void init() throws ServletException {
-        // Récupérer le package des contrôleurs depuis web.xml
-        controllerPackage = getInitParameter("controllerPackage");
-        if (controllerPackage == null || controllerPackage.isEmpty()) {
-            throw new ServletException("Le package des contrôleurs n'est pas spécifié dans web.xml");
-        }
-        
-        try {
-            scanControllers();
-        } catch (Exception e) {
-            throw new ServletException("Erreur lors du scan des contrôleurs", e);
-        }
+    public void init(ServletConfig config) throws ServletException {
+        super.init(config);
+        controllerPackage = config.getInitParameter("controllerPackage");
+        controllerNames = new ArrayList<>();
+        scanControllers();
     }
     
-    private void scanControllers() throws Exception {
-        String path = controllerPackage.replace('.', '/');
-        URL resource = getClass().getClassLoader().getResource(path);
-        if (resource == null) {
-            throw new ServletException("Package " + controllerPackage + " non trouvé");
-        }
-        
-        File directory = new File(resource.getFile());
-        if (directory.exists()) {
-            for (File file : directory.listFiles()) {
-                if (file.getName().endsWith(".class")) {
-                    String className = controllerPackage + '.' + 
-                        file.getName().substring(0, file.getName().length() - 6);
-                    Class<?> cls = Class.forName(className);
-                    if (cls.isAnnotationPresent(AnnotationController.class)) {
-                        controllers.add(cls);
-                        System.out.println("Contrôleur trouvé: " + cls.getName());
+    private void scanControllers() {
+        if (controllerNames.isEmpty() && controllerPackage != null) {
+            String packagePath = controllerPackage.replace('.', '/');
+            String classPath = getServletContext().getRealPath("/WEB-INF/classes/" + packagePath);
+            File packageDir = new File(classPath);
+            
+            if (packageDir.exists() && packageDir.isDirectory()) {
+                for (File file : packageDir.listFiles()) {
+                    if (file.getName().endsWith(".class")) {
+                        try {
+                            String className = controllerPackage + "." + 
+                                file.getName().substring(0, file.getName().length() - 6);
+                            Class<?> clazz = Class.forName(className);
+                            
+                            if (clazz.isAnnotationPresent(AnnotationController.class)) {
+                                controllerNames.add(clazz.getSimpleName());
+                            }
+                        } catch (ClassNotFoundException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
             }
@@ -67,8 +63,8 @@ public class FrontController extends HttpServlet {
             out.println("<h1>URL appelée : " + request.getRequestURL() + "</h1>");
             out.println("<h2>Contrôleurs trouvés :</h2>");
             out.println("<ul>");
-            for (Class<?> controller : controllers) {
-                out.println("<li>" + controller.getName() + "</li>");
+            for (String controllerName : controllerNames) {
+                out.println("<li>" + controllerName + "</li>");
             }
             out.println("</ul>");
             out.println("</body>");
@@ -87,4 +83,4 @@ public class FrontController extends HttpServlet {
             throws ServletException, IOException {
         processRequest(request, response);
     }
-}
+} 

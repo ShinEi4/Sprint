@@ -2,45 +2,28 @@
 
 Un framework MVC léger inspiré de Spring MVC.
 
+## Fonctionnalités
+
+- Annotation `@AnnotationController` pour marquer les classes contrôleur
+- FrontController qui scanne automatiquement les contrôleurs
+- Configuration simple via web.xml
+
 ## Configuration
 
-### 1. Structure du Projet
-Votre projet doit suivre cette structure :
-MonProjet/
-├── WEB-INF/
-│ ├── classes/
-│ │ └── [vos classes compilées]
-│ ├── lib/
-│ │ └── Framework.jar
-│ └── web.xml
-
-### 2. Configuration dans web.xml
+1. Ajoutez le Framework.jar à votre projet
+2. Configurez le web.xml avec le package de vos contrôleurs :
 xml
-<web-app>
-<servlet>
-<servlet-name>FrontController</servlet-name>
-<servlet-class>ituprom16.framework.servlet.FrontController</servlet-class>
 <init-param>
 <param-name>controllerPackage</param-name>
-<param-value>com.monprojet.controllers</param-value>
+<param-value>votre.package.controller</param-value>
 </init-param>
-</servlet>
-<servlet-mapping>
-<servlet-name>FrontController</servlet-name>
-<url-pattern>/</url-pattern>
-</servlet-mapping>
-</web-app>
+3. Annotez vos contrôleurs avec `@AnnotationController`
 
-### 3. Création des Contrôleurs
-java
-import ituprom16.framework.annotation.AnnotationController;
-@AnnotationController
-public class MonController {
-// Méthodes du contrôleur
-}
+## Structure
+- `ituprom16.framework.annotation` : Annotations du framework
+- `ituprom16.framework.servlet` : Servlets du framework
 
-
-### 4. Déploiement
-1. Placez Framework.jar dans WEB-INF/lib
-2. Compilez vos contrôleurs
-3. Déployez sur votre serveur d'application
+## Utilisation
+1. Créez vos contrôleurs dans le package spécifié
+2. Annotez-les avec `@AnnotationController`
+3. Le FrontController les détectera automatiquement

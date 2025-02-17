@@ -9,13 +9,13 @@
         <servlet-class>ituprom16.framework.servlet.FrontController</servlet-class>
         <init-param>
             <param-name>controllerPackage</param-name>
-            <param-value>etu2025.test.controller</param-value>
+            <param-value>test.controller</param-value>
         </init-param>
     </servlet>
     
     <servlet-mapping>
         <servlet-name>FrontController</servlet-name>
-        <url-pattern>/*</url-pattern>
+        <url-pattern>/</url-pattern>
     </servlet-mapping>
     
-</web-app>
+</web-app> 
