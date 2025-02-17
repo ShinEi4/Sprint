@@ -21,6 +21,7 @@ import java.lang.reflect.Parameter;
 import ituprom16.framework.annotation.ModelAttribute;
 import ituprom16.framework.annotation.RequestParam;
 import java.lang.reflect.Field;
+import ituprom16.framework.session.MySession;
 
 public class FrontController extends HttpServlet {
     private HashMap<String, Mapping> mappingUrls;
@@ -227,6 +228,9 @@ public class FrontController extends HttpServlet {
             }
             else if (param.isAnnotationPresent(ModelAttribute.class)) {
                 args[i] = handleModelAttribute(param.getType(), request);
+            }
+            else if (param.getType().equals(MySession.class)) {
+                args[i] = new MySession(request.getSession());
             }
         }
         
