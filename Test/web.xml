@@ -6,7 +6,7 @@
     
     <servlet>
         <servlet-name>FrontController</servlet-name>
-        <servlet-class>etu2025.framework.servlet.FrontController</servlet-class>
+        <servlet-class>ituprom16.framework.servlet.FrontController</servlet-class>
     </servlet>
     
     <servlet-mapping>

@@ -1,4 +1,4 @@
-package ituprom16.framework.servlet;
+package ituprom16.servlet; 
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
