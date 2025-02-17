@@ -1,31 +1,33 @@
 package ituprom16.framework.servlet;
 
 import ituprom16.framework.annotation.AnnotationController;
+import ituprom16.framework.annotation.GET;
+import ituprom16.framework.model.Mapping;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
+import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.io.File;
 import javax.servlet.ServletConfig;
 
 public class FrontController extends HttpServlet {
-    private List<String> controllerNames;
+    private HashMap<String, Mapping> mappingUrls;
     private String controllerPackage;
     
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         controllerPackage = config.getInitParameter("controllerPackage");
-        controllerNames = new ArrayList<>();
+        mappingUrls = new HashMap<>();
         scanControllers();
     }
     
     private void scanControllers() {
-        if (controllerNames.isEmpty() && controllerPackage != null) {
+        if (mappingUrls.isEmpty() && controllerPackage != null) {
             String packagePath = controllerPackage.replace('.', '/');
             String classPath = getServletContext().getRealPath("/WEB-INF/classes/" + packagePath);
             File packageDir = new File(classPath);
@@ -39,7 +41,7 @@ public class FrontController extends HttpServlet {
                             Class<?> clazz = Class.forName(className);
                             
                             if (clazz.isAnnotationPresent(AnnotationController.class)) {
-                                controllerNames.add(clazz.getSimpleName());
+                                scanMethods(clazz);
                             }
                         } catch (ClassNotFoundException e) {
                             e.printStackTrace();
@@ -49,24 +51,45 @@ public class FrontController extends HttpServlet {
             }
         }
     }
+
+    private void scanMethods(Class<?> controller) {
+        String controllerName = controller.getSimpleName();
+        for (Method method : controller.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(GET.class)) {
+                GET getAnnotation = method.getAnnotation(GET.class);
+                String methodUrl = getAnnotation.value();
+                String fullUrl = "/" + controllerName + methodUrl;
+                Mapping mapping = new Mapping(controller.getName(), method.getName());
+                mappingUrls.put(fullUrl, mapping);
+            }
+        }
+    }
     
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        String uri = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        String url = uri.substring(contextPath.length());
+        
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
-            out.println("<title>Liste des contrôleurs</title>");
+            out.println("<title>Mapping d'URL</title>");
             out.println("</head>");
             out.println("<body>");
-            out.println("<h1>URL appelée : " + request.getRequestURL() + "</h1>");
-            out.println("<h2>Contrôleurs trouvés :</h2>");
-            out.println("<ul>");
-            for (String controllerName : controllerNames) {
-                out.println("<li>" + controllerName + "</li>");
+            out.println("<h1>URL appelée : " + url + "</h1>");
+            
+            Mapping mapping = mappingUrls.get(url);
+            if (mapping != null) {
+                out.println("<h2>Mapping trouvé :</h2>");
+                out.println("<p>Classe : " + mapping.getClassName() + "</p>");
+                out.println("<p>Méthode : " + mapping.getMethodName() + "</p>");
+            } else {
+                out.println("<p>Aucune méthode n'est associée à ce chemin.</p>");
             }
-            out.println("</ul>");
+            
             out.println("</body>");
             out.println("</html>");
         }

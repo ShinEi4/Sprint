@@ -1,6 +1,7 @@
 package test.controller;
 
 import ituprom16.framework.annotation.AnnotationController;
+import ituprom16.framework.annotation.GET;
 
 @AnnotationController
 public class TestController {
@@ -8,5 +9,15 @@ public class TestController {
     
     public String getName() {
         return name;
+    }
+    
+    @GET("/test")
+    public String test() {
+        return "Page de test";
+    }
+    
+    @GET("/hello")
+    public String hello() {
+        return "Hello World";
     }
 } 

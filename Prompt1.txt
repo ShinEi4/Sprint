@@ -1,4 +1,0 @@
-Je voudrais que te écris les règles de ce projet dans ce @.cursorrules :
--Le projet est la mise en place d'un framework similaire à spring   mvc qui se fait en 2 dossier : le dossier @/Framework où l'on va developper notre framework et le dossier @/Test pour tester directement le framework
--Le projet est un projet java 17 utilisant javax (si nécessaire) et Wildfly 26.1.2 
--Le fichier @deploy.bat sert à compiler et à deployer le projet framework dans le deployements de wildfly

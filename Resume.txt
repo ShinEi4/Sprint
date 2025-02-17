@@ -5,3 +5,8 @@ Sprint 1 :
     Création annotation controller
     Init Param (web.xml)
     Afficher tout les controllers dans le même package
+
+Sprint 2 :
+    Mapping des urls avec les controllers et les methods en utilisant l'annotation GET
+    
+
