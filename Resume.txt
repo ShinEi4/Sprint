@@ -33,6 +33,15 @@ Sprint 6 :
     Récupération des paramètres d'une méthode et conversion des types
     Ajout du paramètre HttpServletRequest dans la fonction invoquant les méthodes des contrôleurs
 
+Sprint 7 :
+    Ajout des annotations pour la gestion des objets en paramètres :
+        - @ModelAttribute : Pour marquer un paramètre comme objet à remplir automatiquement
+        - @RequestParam : Pour lier les champs d'un objet aux paramètres du formulaire
+    Amélioration du FrontController :
+        - Ajout de la méthode handleModelAttribute pour gérer les objets annotés
+        - Remplissage automatique des attributs d'objets depuis les paramètres de requête
+        - Support des noms de champs personnalisés via @RequestParam(name="...")
+
 
 
 
