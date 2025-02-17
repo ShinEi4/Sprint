@@ -42,6 +42,14 @@ Sprint 7 :
         - Remplissage automatique des attributs d'objets depuis les paramètres de requête
         - Support des noms de champs personnalisés via @RequestParam(name="...")
 
+Sprint 8 :
+    Ajout de la gestion des sessions :
+        - Création de la classe MySession pour encapsuler HttpSession
+        - Implémentation des méthodes de gestion :
+            * add(String key, Object value) : Ajouter une donnée en session
+            * get(String key) : Récupérer une donnée de la session
+            * delete(String key) : Supprimer une donnée de la session
+            * invalidate() : Détruire la session
 
 
 
