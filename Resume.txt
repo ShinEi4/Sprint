@@ -20,11 +20,12 @@ Sprint 4 :
     Condition pour les types de données dans front controller
 
 Sprint 5 :
-    Ajout Classe FrameworkError pour gérer les erreurs dans le front controller et pour plus de visibilité
-    Afficher des erreurs
-    Erreurs :
-        - package vide ou package qui n'existe pas
-        - url n'existe pas
-        - url methode dupliquer (1 url +eurs methodes)
-        - type de retour non valide
+    Ajout gestion des erreurs dans le FrontController :
+    - Stockage des erreurs dans une HashMap<String, String>
+    - Affichage des erreurs via /errors ou directement lors de l'accès à une URL
+    - Types d'erreurs gérées :
+        * Package vide ou inexistant
+        * URL inexistante
+        * URL en double (même URL pour plusieurs méthodes)
+        * Type de retour non valide (autre que String ou ModelView)
 
