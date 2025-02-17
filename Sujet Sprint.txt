@@ -9,22 +9,14 @@ Objectif: Créer un servlet qui réceptionnera toutes les requêtes clients et q
             -Tester n'importe quel url associé au projet web
             
 Sprint 01:
-Creer une nouvelle branche "sprint1-ETU"
-Et envoyer le framework sur git.
-Modif dans mon framework :
-1-Creer AnnotationController
-2- Annoter mes controleurs avec AnnotationController
-3- Mettre mes controleurs dans le meme package
-Modif dans FrontController :
-(Prendre le nom du package où se trouvent mes controleurs)
-1- Tester si j'ai déjà scanner mes controleurs
-+ Si oui, afficher la liste des noms de mes controleurs 
-+Sinon scanner, puis afficher la liste des noms de mes controleurs 
-Modif dans le projet de test:
-Web.xml
-     + declarer  le nom du package (misy ny controller rehetra) (using init-param)
-     + declarer mon frontServlet
-‌Creer un ReadMe file pour décrire précisément les configs à faire pour utiliser mon framework.(envoyer le ReadMe file avec mon framework sur Git)
+Dans le côté framework : 
+1- Creer une annotation pour les controleurs : AnnotationController
+2- Annoter les controleurs avec AnnotationController
+3- Mettre mes controleurs dans le meme package (Prendre le nom du package où se trouvent mes controleurs)
+4- Scanner les controlleurs et afficher les noms des controlleurs déjà scannés 
+5-Creer un ReadMe file pour décrire précisément les configs à faire pour utiliser le framework (à mettre dans le dossier framework)
+Dans le côté test:
+-Dans @web.xml : declarer  le nom du package des controlleurs en utilisant init-param
 
 Sprint 02
 Objectif :
