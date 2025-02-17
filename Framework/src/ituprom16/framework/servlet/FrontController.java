@@ -18,6 +18,9 @@ import javax.servlet.RequestDispatcher;
 import java.util.Map;
 import ituprom16.framework.annotation.Param;
 import java.lang.reflect.Parameter;
+import ituprom16.framework.annotation.ModelAttribute;
+import ituprom16.framework.annotation.RequestParam;
+import java.lang.reflect.Field;
 
 public class FrontController extends HttpServlet {
     private HashMap<String, Mapping> mappingUrls;
@@ -220,17 +223,48 @@ public class FrontController extends HttpServlet {
         for (int i = 0; i < parameters.length; i++) {
             Parameter param = parameters[i];
             if (param.isAnnotationPresent(Param.class)) {
-                Param annotation = param.getAnnotation(Param.class);
-                String paramName = annotation.name();
-                String paramValue = request.getParameter(paramName);
-                
-                // Convertir la valeur selon le type du paramètre
-                Class<?> paramType = param.getType();
-                args[i] = convertParamValue(paramValue, paramType);
+                args[i] = handleParamAnnotation(param, request);
+            }
+            else if (param.isAnnotationPresent(ModelAttribute.class)) {
+                args[i] = handleModelAttribute(param.getType(), request);
             }
         }
         
         return args;
+    }
+
+    private Object handleParamAnnotation(Parameter param, HttpServletRequest request) {
+        Param annotation = param.getAnnotation(Param.class);
+        String paramName = annotation.name();
+        String paramValue = request.getParameter(paramName);
+        return convertParamValue(paramValue, param.getType());
+    }
+
+    private Object handleModelAttribute(Class<?> modelClass, HttpServletRequest request) {
+        try {
+            Object instance = modelClass.getDeclaredConstructor().newInstance();
+            
+            for (Field field : modelClass.getDeclaredFields()) {
+                if (field.isAnnotationPresent(RequestParam.class)) {
+                    RequestParam annotation = field.getAnnotation(RequestParam.class);
+                    String paramName = annotation.name();
+                    if (paramName.isEmpty()) {
+                        paramName = field.getName();
+                    }
+                    
+                    String paramValue = request.getParameter(paramName);
+                    if (paramValue != null) {
+                        field.setAccessible(true);
+                        field.set(instance, convertParamValue(paramValue, field.getType()));
+                    }
+                }
+            }
+            
+            return instance;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private Object convertParamValue(String value, Class<?> type) {
