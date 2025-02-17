@@ -1,0 +1,151 @@
+Sprint 00:
+Objectif: Créer un servlet qui réceptionnera toutes les requêtes clients et qui les traitera
+    Etapes:
+        -Coté Framework:
+            -Créer un servlet FrontController dont la methode processRequest affichera l'url dans 
+            lequel on se trouve
+        -Coté Test
+            -Associer le FrontController à l'url pattern "/" dans le web.xml du projet
+            -Tester n'importe quel url associé au projet web
+            
+Sprint 01:
+Creer une nouvelle branche "sprint1-ETU"
+Et envoyer le framework sur git.
+Modif dans mon framework :
+1-Creer AnnotationController
+2- Annoter mes controleurs avec AnnotationController
+3- Mettre mes controleurs dans le meme package
+Modif dans FrontController :
+(Prendre le nom du package où se trouvent mes controleurs)
+1- Tester si j'ai déjà scanner mes controleurs
++ Si oui, afficher la liste des noms de mes controleurs 
++Sinon scanner, puis afficher la liste des noms de mes controleurs 
+Modif dans le projet de test:
+Web.xml
+     + declarer  le nom du package (misy ny controller rehetra) (using init-param)
+     + declarer mon frontServlet
+‌Creer un ReadMe file pour décrire précisément les configs à faire pour utiliser mon framework.(envoyer le ReadMe file avec mon framework sur Git)
+
+Sprint 02
+Objectif :
+ Récupérer la classe et la méthode associées à une URL donnée
+Étapes :
+ # Créer une annotation GET pour annoter les méthodes dans les contrôleurs
+ # Créer la classe Mapping qui aura pour attributs :
+ String className
+ String methodName
+ # Dans FrontController :
+ - Enlever l'attribut boolean
+ - Créer un HashMap (String url, Mapping)
+ - init :
+ Faire les scans pour avoir les contrôleurs
+ Pour chaque contrôleur, prendre toutes les méthodes et voir s'il y a l'annotation GET
+ S'il y en a, créer un nouveau Mapping : (controller.name, method.name)
+ HashMap.associer(annotation.value, Mapping)
+ # ProcessRequest
+ Prendre le Mapping associé au chemin URL de la requête
+ Si on trouve le Mapping associé, afficher le chemin URL et le Mapping
+ Sinon, afficher qu'il n'y a pas de méthode associée à ce chemin
+
+Sprint 3
+Objectif :
+Exécuter la méthode de la classe associée à une URL donnée
+Étapes :
+# Dans le FrontController ( ProcessRequest ):
+Si on trouve le Mapping associé à l'URL ,
+- Récupérer la classe par son nom
+- Récupérer la méthode par son nom
+- Invoquer la méthode sur l'instance de la classe
+- Afficher la valeur retournée par la méhode
+# Projet Test
+Les méhodes des controlleurs qui seront annotées ont pour type de retour "String"
+
+Objectif :
+#sprint_4
+Objectif:
+Envoyer des données du controller vers view
+Etapes:
+Côté Framework
+_créer une classe ModelView qui aura pour attributs: 
+ _String url[url de destination après l'exécution de la méthode], 
+ _HashMap<String : nom de la variable, Object: sa valeur> data [donnée à envoyer vers cette view],
+ _créer une fonction "AddObject" qui a comme type de retour void pour pouvoir mettre les données dans HashMap
+Dans FrontController,
+ dans ProcessRequest, récupérer les données issues de la méthode annotée Get
+     _si les data sont de type string, retourner la valeur directement
+     _si les données sont de type ModelView, récupérer le url et dispatcher les données vers cet url 
+  _boucle de data: y faire request.setAttribute
+     _si autre, retourner "non reconnu"
+Test: 
+Les méthodes des controlleurs qui seront annotées ont pour type de retour "String" ou "ModelView"
+
+Objectif :
+#sprint_5
+Objectif:
+Afficher des erreurs
+Etapes:
+Dans FrontController,
+ dans ProcessRequest, affiche les erreurs suivant
+      - package vide ou package qui n'existe pas
+      - url n'existe pas
+      - url methode dupliquer (1 url +eurs methodes)
+      - type de retour non valide
+
+SPRINT 6 : Envoyer des données d'un formulaire vers un contrôleur
+FRAMEWORK :
+Étape 1 : Créer une annotation @Param
+Attribut :
+-   String name
+Étape 2 : Ajouter un argument HttpServletRequest request dans la fonction invoquant les méthodes des contrôleurs
+-   Boucler sur les arguments de la méthode du contrôleur et récupérer les noms des annotations @Param de chaque argument
+-   Attribuer la valeur de chaque argument en utilisant request.getParameter avec le nom de son annotation comme argument
+TEST :
+-   Créer un formulaire d'envoi (ex : Entrer votre nom)
+-   Créer une méthode dans un contrôleur pour récupérer le nom entré
+-   Renvoyer un ModelView pour vérifier si le nom est bien récupéré
+
+Sprint7
+Objectif:
+Permettre de mettre en paramètre d'une fonction de mapping un objet et de setup ses attributs.
+Etape 1: Créer une annotation pour l'objet en paramètre
+Etape 2: Créer un process qui va s'effectuer automatiquement lors que le programme détecte l'annotation créée plus tôt
+             -> Ce process va bouclé tous les attributs de l'objet pour obtenir leurs valeurs attribuées dans request.getParameter
+            -> Créer une nouvelle annotation de type ElementType.FIELD pour donner le choix aux utilisateurs du framework le choix entre utilisé le même nom dans sa classe et son formulaire ou annoté l'attribut avec le nom présent dans son formulaire sans devoir à utilisé le même nom
+
+Sprint 8 : Gestion et utilisation de session
+Côté Framework :
+Étape 1 :
+- Créer une classe MySession ayant comme seul attribut HttpSession session
+- Ajouter fonctions get(String key), add(String key, Object objet), delete(String key)
+Étape 2 :
+- A l’appel des méthodes des controllers de l’utilisateur, pendant la génération des arguments, vérifier si le paramètre est de type MySession et dans ce cas, créer un MySession avec req.getSession()
+Côté test :
+- Créer un formulaire de login (identifiant,mot de passe)
+- Quand la personne se connecte, elle accède à une liste de données propres à son identifiant
+-Ajouter un bouton déconnexion qui supprime les données de la session
+Vous pouvez utiliser n’importe quel type pour les listes de données mais sans utiliser de système de base de donnée
+
+Sprint 9 : Exposer les action du controlleur en REST API
+On supposera qu'on a une liste, au lieu de se diriger vers un jsp plus precisement un view,
+on va retourner une reponse http avec un body en format JSON ,avec un responsetype: txt/JSON
+
+Etapes pour la realisation:
+- Creer une nouvelle classe Annotation: ex Restapi
+- Dans FrontController, on doit verfifer l'existence de cette annotation:
+    -> si l'annotaion n'existe pas => continuer comme avant
+    -> si oui:
+        - Recupere la valeur de retour de la methode gson
+            -> si autre que modelView, transformer en JSON directement
+            -> si modelView, transformer en JSON la valeur de l'attribut data
+
+Sprint 10 :
+Coté developpeur :
+On peut mettre une annotation sur la methode : @GET sy @POST
+S'il n'y a pas d'annotation, on utilsera GET par défaut (Comme ce qu'on a fait auparavant)
+Coté framework :
+Il faut identifier si la methode soit GET soit POST et l' Url dependra de ca
+Avant l'url est associé au Classe + action (methode dans @controlleur) mais maintenant on ajoutera un autre attribut (VERB) on a le choix : soit GET soit POST
+S'il y a autre que get et post,on doit lever une exception : methode ou controlleur : @GET @url("/getemp") getEmp .... alors que c'est l' url "getemp" qu'on appelera avec @verb (method)
+POST !!
+
+
