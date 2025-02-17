@@ -2,6 +2,7 @@ package test.controller;
 
 import ituprom16.framework.annotation.AnnotationController;
 import ituprom16.framework.annotation.GET;
+import ituprom16.framework.model.ModelView;
 
 @AnnotationController
 public class EmpController {
@@ -17,12 +18,11 @@ public class EmpController {
     }
     
     @GET("/details")
-    public String getEmployeeDetails() {
-        StringBuilder details = new StringBuilder();
-        details.append("Détails des employés :<br>");
-        details.append("1. Jean - Développeur<br>");
-        details.append("2. Marie - Designer<br>");
-        details.append("3. Pierre - Manager");
-        return details.toString();
+    public ModelView getEmployeeDetails() {
+        ModelView mv = new ModelView("/employees.jsp");
+        mv.addObject("title", "Détails des employés");
+        mv.addObject("count", 3);
+        mv.addObject("names", new String[]{"Jean", "Marie", "Pierre"});
+        return mv;
     }
 } 
