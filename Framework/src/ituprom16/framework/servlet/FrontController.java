@@ -76,16 +76,34 @@ public class FrontController extends HttpServlet {
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
-            out.println("<title>Mapping d'URL</title>");
+            out.println("<title>Résultat de la méthode</title>");
             out.println("</head>");
             out.println("<body>");
             out.println("<h1>URL appelée : " + url + "</h1>");
             
             Mapping mapping = mappingUrls.get(url);
             if (mapping != null) {
-                out.println("<h2>Mapping trouvé :</h2>");
-                out.println("<p>Classe : " + mapping.getClassName() + "</p>");
-                out.println("<p>Méthode : " + mapping.getMethodName() + "</p>");
+                try {
+                    // Récupérer la classe par son nom
+                    Class<?> controllerClass = Class.forName(mapping.getClassName());
+                    
+                    // Créer une instance de la classe
+                    Object controllerInstance = controllerClass.getDeclaredConstructor().newInstance();
+                    
+                    // Récupérer la méthode par son nom
+                    Method method = controllerClass.getDeclaredMethod(mapping.getMethodName());
+                    
+                    // Invoquer la méthode sur l'instance
+                    String result = (String) method.invoke(controllerInstance);
+                    
+                    // Afficher le résultat
+                    out.println("<h2>Résultat de la méthode :</h2>");
+                    out.println("<p>" + result + "</p>");
+                    
+                } catch (Exception e) {
+                    out.println("<p>Erreur lors de l'exécution de la méthode : " + e.getMessage() + "</p>");
+                    e.printStackTrace();
+                }
             } else {
                 out.println("<p>Aucune méthode n'est associée à ce chemin.</p>");
             }
