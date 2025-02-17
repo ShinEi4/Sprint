@@ -16,6 +16,8 @@ import javax.servlet.ServletConfig;
 import ituprom16.framework.model.ModelView;
 import javax.servlet.RequestDispatcher;
 import java.util.Map;
+import ituprom16.framework.annotation.Param;
+import java.lang.reflect.Parameter;
 
 public class FrontController extends HttpServlet {
     private HashMap<String, Mapping> mappingUrls;
@@ -148,11 +150,27 @@ public class FrontController extends HttpServlet {
             // Créer une instance de la classe
             Object controllerInstance = controllerClass.getDeclaredConstructor().newInstance();
             
-            // Récupérer la méthode par son nom
-            Method method = controllerClass.getDeclaredMethod(mapping.getMethodName());
+            // Récupérer toutes les méthodes de la classe
+            Method[] methods = controllerClass.getDeclaredMethods();
+            Method targetMethod = null;
             
-            // Invoquer la méthode sur l'instance
-            Object result = method.invoke(controllerInstance);
+            // Trouver la méthode avec le bon nom
+            for (Method method : methods) {
+                if (method.getName().equals(mapping.getMethodName())) {
+                    targetMethod = method;
+                    break;
+                }
+            }
+            
+            if (targetMethod == null) {
+                throw new Exception("Méthode " + mapping.getMethodName() + " non trouvée");
+            }
+            
+            // Préparer les arguments de la méthode
+            Object[] methodArgs = prepareMethodArguments(targetMethod, request);
+            
+            // Invoquer la méthode sur l'instance avec les arguments
+            Object result = targetMethod.invoke(controllerInstance, methodArgs);
             
             // Traiter le résultat selon son type
             if (result instanceof String) {
@@ -191,7 +209,43 @@ public class FrontController extends HttpServlet {
             
         } catch (Exception e) {
             displayError(response, "Erreur: " + e.getMessage());
+            e.printStackTrace(); // Pour le débogage
         }
+    }
+
+    private Object[] prepareMethodArguments(Method method, HttpServletRequest request) {
+        Parameter[] parameters = method.getParameters();
+        Object[] args = new Object[parameters.length];
+        
+        for (int i = 0; i < parameters.length; i++) {
+            Parameter param = parameters[i];
+            if (param.isAnnotationPresent(Param.class)) {
+                Param annotation = param.getAnnotation(Param.class);
+                String paramName = annotation.name();
+                String paramValue = request.getParameter(paramName);
+                
+                // Convertir la valeur selon le type du paramètre
+                Class<?> paramType = param.getType();
+                args[i] = convertParamValue(paramValue, paramType);
+            }
+        }
+        
+        return args;
+    }
+
+    private Object convertParamValue(String value, Class<?> type) {
+        if (value == null) return null;
+        
+        if (type.equals(String.class)) {
+            return value;
+        } else if (type.equals(Integer.class) || type.equals(int.class)) {
+            return Integer.parseInt(value);
+        } else if (type.equals(Double.class) || type.equals(double.class)) {
+            return Double.parseDouble(value);
+        }
+        // Ajouter d'autres conversions si nécessaire
+        
+        return value;
     }
 
     private void displayError(HttpServletResponse response, String message) throws IOException {
