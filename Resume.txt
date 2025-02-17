@@ -1,0 +1,7 @@
+Sprint 0 :
+    Avoir l'url de la requête : request.getRequestURL()
+
+Sprint 1 :
+    Création annotation controller
+    Init Param (web.xml)
+    Afficher tout les controllers dans le même package
