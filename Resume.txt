@@ -19,5 +19,12 @@ Sprint 4 :
     Récupérer les données issues de la méthode annotée Get
     Condition pour les types de données dans front controller
 
-
+Sprint 5 :
+    Ajout Classe FrameworkError pour gérer les erreurs dans le front controller et pour plus de visibilité
+    Afficher des erreurs
+    Erreurs :
+        - package vide ou package qui n'existe pas
+        - url n'existe pas
+        - url methode dupliquer (1 url +eurs methodes)
+        - type de retour non valide
 

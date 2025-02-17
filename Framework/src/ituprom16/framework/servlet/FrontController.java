@@ -20,50 +20,84 @@ import java.util.Map;
 public class FrontController extends HttpServlet {
     private HashMap<String, Mapping> mappingUrls;
     private String controllerPackage;
+    private HashMap<String, String> errorMessages;  // Pour stocker les messages d'erreur
     
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         controllerPackage = config.getInitParameter("controllerPackage");
         mappingUrls = new HashMap<>();
+        errorMessages = new HashMap<>();  // Initialisation des messages d'erreur
+        
+        if (controllerPackage == null || controllerPackage.trim().isEmpty()) {
+            addError("package", "Le package des contrôleurs n'est pas spécifié dans web.xml");
+            return;
+        }
         scanControllers();
     }
+
+    private void addError(String key, String message) {
+        errorMessages.put(key, message);
+    }
     
-    private void scanControllers() {
-        if (mappingUrls.isEmpty() && controllerPackage != null) {
+    private void scanControllers() throws ServletException {
+        if (controllerPackage != null) {
             String packagePath = controllerPackage.replace('.', '/');
             String classPath = getServletContext().getRealPath("/WEB-INF/classes/" + packagePath);
             File packageDir = new File(classPath);
             
-            if (packageDir.exists() && packageDir.isDirectory()) {
-                for (File file : packageDir.listFiles()) {
-                    if (file.getName().endsWith(".class")) {
-                        try {
-                            String className = controllerPackage + "." + 
-                                file.getName().substring(0, file.getName().length() - 6);
-                            Class<?> clazz = Class.forName(className);
-                            
-                            if (clazz.isAnnotationPresent(AnnotationController.class)) {
-                                scanMethods(clazz);
-                            }
-                        } catch (ClassNotFoundException e) {
-                            e.printStackTrace();
+            if (!packageDir.exists() || !packageDir.isDirectory()) {
+                throw new ServletException("Le package " + controllerPackage + " n'existe pas");
+            }
+
+            // HashMap pour vérifier les URLs en double
+            HashMap<String, String> urlMethods = new HashMap<>();
+            
+            for (File file : packageDir.listFiles()) {
+                if (file.getName().endsWith(".class")) {
+                    try {
+                        String className = controllerPackage + "." + 
+                            file.getName().substring(0, file.getName().length() - 6);
+                        Class<?> clazz = Class.forName(className);
+                        
+                        if (clazz.isAnnotationPresent(AnnotationController.class)) {
+                            scanMethodsWithUrlCheck(clazz, urlMethods);
                         }
+                    } catch (ClassNotFoundException e) {
+                        throw new ServletException("Erreur lors du chargement de la classe: " + e.getMessage());
                     }
                 }
             }
         }
     }
 
-    private void scanMethods(Class<?> controller) {
+    private void scanMethodsWithUrlCheck(Class<?> controller, HashMap<String, String> urlMethods) {
         String controllerName = controller.getSimpleName();
         for (Method method : controller.getDeclaredMethods()) {
             if (method.isAnnotationPresent(GET.class)) {
                 GET getAnnotation = method.getAnnotation(GET.class);
                 String methodUrl = getAnnotation.value();
                 String fullUrl = "/" + controllerName + methodUrl;
-                Mapping mapping = new Mapping(controller.getName(), method.getName());
-                mappingUrls.put(fullUrl, mapping);
+
+                // Vérifier le type de retour
+                if (!method.getReturnType().equals(String.class) && 
+                    !method.getReturnType().equals(ModelView.class)) {
+                    addError(controllerName + methodUrl, 
+                        "Type de retour non valide pour la méthode " + method.getName() + 
+                        " dans " + controllerName + ". Seuls String et ModelView sont autorisés.");
+                    continue;
+                }
+
+                // Vérifier si l'URL existe déjà
+                if (urlMethods.containsKey(fullUrl)) {
+                    addError(fullUrl, "URL en double détectée: " + fullUrl + 
+                        " dans " + controllerName + "." + method.getName() + 
+                        " et " + urlMethods.get(fullUrl));
+                    continue;
+                }
+
+                urlMethods.put(fullUrl, controllerName + "." + method.getName());
+                mappingUrls.put(fullUrl, new Mapping(controller.getName(), method.getName()));
             }
         }
     }
@@ -74,67 +108,132 @@ public class FrontController extends HttpServlet {
         String contextPath = request.getContextPath();
         String url = uri.substring(contextPath.length());
         
+        // Afficher les erreurs si demandé
+        if (url.equals("/errors")) {
+            displayErrors(response);
+            return;
+        }
+
+        // Vérifier d'abord s'il y a une erreur pour cette URL
+        String methodError = errorMessages.get(url);
+        if (methodError != null) {
+            displayError(response, methodError);
+            return;
+        }
+
+        // Vérifier si une méthode est associée à l'URL
+        String[] urlParts = url.split("/");
+        if (urlParts.length >= 3) {
+            String controllerName = urlParts[1];
+            String methodPath = url.substring(url.indexOf("/", 1));
+            String potentialError = controllerName + methodPath;
+            
+            if (errorMessages.containsKey(potentialError)) {
+                displayError(response, errorMessages.get(potentialError));
+                return;
+            }
+        }
+
+        // Si aucune erreur n'est trouvée, continuer avec le traitement normal
         Mapping mapping = mappingUrls.get(url);
-        if (mapping != null) {
-            try {
-                // Récupérer la classe par son nom
-                Class<?> controllerClass = Class.forName(mapping.getClassName());
-                
-                // Créer une instance de la classe
-                Object controllerInstance = controllerClass.getDeclaredConstructor().newInstance();
-                
-                // Récupérer la méthode par son nom
-                Method method = controllerClass.getDeclaredMethod(mapping.getMethodName());
-                
-                // Invoquer la méthode sur l'instance
-                Object result = method.invoke(controllerInstance);
-                
-                // Traiter le résultat selon son type
-                if (result instanceof String) {
-                    // Si c'est une String, l'afficher directement
-                    response.setContentType("text/html;charset=UTF-8");
-                    try (PrintWriter out = response.getWriter()) {
-                        out.println("<!DOCTYPE html>");
-                        out.println("<html><head><title>Résultat</title></head><body>");
-                        out.println(result);
-                        out.println("</body></html>");
-                    }
-                } 
-                else if (result instanceof ModelView) {
-                    // Si c'est un ModelView, dispatcher vers l'URL spécifiée
-                    ModelView modelView = (ModelView) result;
-                    
-                    // Ajouter les données dans la requête
-                    for (Map.Entry<String, Object> entry : modelView.getData().entrySet()) {
-                        request.setAttribute(entry.getKey(), entry.getValue());
-                    }
-                    
-                    // Dispatcher vers l'URL
-                    RequestDispatcher dispatcher = request.getRequestDispatcher(modelView.getUrl());
-                    dispatcher.forward(request, response);
+        if (mapping == null) {
+            displayError(response, "Aucune méthode n'est associée à l'URL: " + url);
+            return;
+        }
+
+        try {
+            // Récupérer la classe par son nom
+            Class<?> controllerClass = Class.forName(mapping.getClassName());
+            
+            // Créer une instance de la classe
+            Object controllerInstance = controllerClass.getDeclaredConstructor().newInstance();
+            
+            // Récupérer la méthode par son nom
+            Method method = controllerClass.getDeclaredMethod(mapping.getMethodName());
+            
+            // Invoquer la méthode sur l'instance
+            Object result = method.invoke(controllerInstance);
+            
+            // Traiter le résultat selon son type
+            if (result instanceof String) {
+                // Si c'est une String, l'afficher directement
+                response.setContentType("text/html;charset=UTF-8");
+                try (PrintWriter out = response.getWriter()) {
+                    out.println("<!DOCTYPE html>");
+                    out.println("<html><head><title>Résultat</title></head><body>");
+                    out.println(result);
+                    out.println("</body></html>");
                 }
-                else {
-                    // Type non reconnu
-                    response.setContentType("text/html;charset=UTF-8");
-                    try (PrintWriter out = response.getWriter()) {
-                        out.println("<!DOCTYPE html>");
-                        out.println("<html><head><title>Erreur</title></head><body>");
-                        out.println("<p>Type de retour non reconnu</p>");
-                        out.println("</body></html>");
-                    }
+            } 
+            else if (result instanceof ModelView) {
+                // Si c'est un ModelView, dispatcher vers l'URL spécifiée
+                ModelView modelView = (ModelView) result;
+                
+                // Ajouter les données dans la requête
+                for (Map.Entry<String, Object> entry : modelView.getData().entrySet()) {
+                    request.setAttribute(entry.getKey(), entry.getValue());
                 }
                 
-            } catch (Exception e) {
-                throw new ServletException(e);
+                // Dispatcher vers l'URL
+                RequestDispatcher dispatcher = request.getRequestDispatcher(modelView.getUrl());
+                dispatcher.forward(request, response);
             }
-        } else {
-            response.setContentType("text/html;charset=UTF-8");
-            try (PrintWriter out = response.getWriter()) {
-                out.println("<!DOCTYPE html>");
-                out.println("<html><head><title>Erreur</title></head><body>");
-                out.println("<p>Aucune méthode n'est associée à ce chemin.</p>");
-                out.println("</body></html>");
+            else {
+                // Type non reconnu
+                response.setContentType("text/html;charset=UTF-8");
+                try (PrintWriter out = response.getWriter()) {
+                    out.println("<!DOCTYPE html>");
+                    out.println("<html><head><title>Erreur</title></head><body>");
+                    out.println("<p>Type de retour non reconnu</p>");
+                    out.println("</body></html>");
+                }
             }
+            
+        } catch (Exception e) {
+            displayError(response, "Erreur: " + e.getMessage());
+        }
+    }
+
+    private void displayError(HttpServletResponse response, String message) throws IOException {
+        response.setContentType("text/html;charset=UTF-8");
+        try (PrintWriter out = response.getWriter()) {
+            out.println("<!DOCTYPE html>");
+            out.println("<html><head><title>Erreur</title>");
+            out.println("<style>");
+            out.println(".error { color: red; padding: 20px; border: 1px solid red; margin: 20px; }");
+            out.println("</style>");
+            out.println("</head><body>");
+            out.println("<div class='error'>");
+            out.println("<h2>Erreur</h2>");
+            out.println("<p>" + message + "</p>");
+            out.println("</div>");
+            out.println("</body></html>");
+        }
+    }
+
+    private void displayErrors(HttpServletResponse response) throws IOException {
+        response.setContentType("text/html;charset=UTF-8");
+        try (PrintWriter out = response.getWriter()) {
+            out.println("<!DOCTYPE html>");
+            out.println("<html><head><title>Erreurs Framework</title>");
+            out.println("<style>");
+            out.println(".error { color: red; padding: 10px; margin: 5px; border: 1px solid red; }");
+            out.println("</style>");
+            out.println("</head><body>");
+            out.println("<h1>Liste des erreurs détectées</h1>");
+            
+            if (errorMessages.isEmpty()) {
+                out.println("<p>Aucune erreur détectée</p>");
+            } else {
+                for (Map.Entry<String, String> error : errorMessages.entrySet()) {
+                    out.println("<div class='error'>");
+                    out.println("<strong>" + error.getKey() + ":</strong> ");
+                    out.println(error.getValue());
+                    out.println("</div>");
+                }
+            }
+            
+            out.println("</body></html>");
         }
     }
 
