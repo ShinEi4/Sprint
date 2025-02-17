@@ -6,6 +6,7 @@ set PROJECT_NAME=TestFramework
 set WILDFLY_PATH=E:\S5\wildfly-26.1.2.Final\wildfly-26.1.2.Final\standalone\deployments
 set LIB_PATH=lib
 set SRC_PATH=src
+set VIEWS_PATH=views
 
 REM 1. Supprimer les anciennes versions
 echo Suppression de l'ancienne version de %PROJECT_NAME%...
@@ -38,13 +39,17 @@ REM 5. Copier le web.xml
 echo Copie du fichier web.xml...
 copy "web.xml" "%PROJECT_NAME%\WEB-INF\"
 
-REM 6. Créer le fichier WAR
+REM 6. Copier les vues JSP
+echo Copie des fichiers JSP...
+xcopy /E /I /Y "%VIEWS_PATH%\*.*" "%PROJECT_NAME%\"
+
+REM 7. Créer le fichier WAR
 echo Création du fichier WAR...
 cd "%PROJECT_NAME%"
 jar -cvf "%PROJECT_NAME%.war" *
 cd ..
 
-REM 7. Déployer dans Wildfly
+REM 8. Déployer dans Wildfly
 echo Déploiement vers Wildfly...
 copy "%PROJECT_NAME%\%PROJECT_NAME%.war" "%WILDFLY_PATH%"
 

@@ -11,3 +11,13 @@ Sprint 2 :
     
 Sprint 3 :
     Exécuter la méthode de la classe associée à une URL donnée (utiliser la méthode invoke)
+
+Sprint 4 :
+    Envoyer des données du controller vers view
+    Création classe ModelView
+    Création fonction AddObject
+    Récupérer les données issues de la méthode annotée Get
+    Condition pour les types de données dans front controller
+
+
+

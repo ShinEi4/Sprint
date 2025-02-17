@@ -52,8 +52,7 @@ Si on trouve le Mapping associé à l'URL ,
 # Projet Test
 Les méthodes des controlleurs qui seront annotées ont pour type de retour "String"
 
-Objectif :
-#sprint_4
+Sprint_4
 Objectif:
 Envoyer des données du controller vers view
 Etapes:
