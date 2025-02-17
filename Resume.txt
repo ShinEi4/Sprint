@@ -28,3 +28,11 @@ Sprint 5 :
         - url methode dupliquer (1 url +eurs methodes)
         - type de retour non valide
 
+Sprint 6 :
+    Ajout annotation @Param pour récupérer les données d'un formulaire
+    Récupération des paramètres d'une méthode et conversion des types
+    Ajout du paramètre HttpServletRequest dans la fonction invoquant les méthodes des contrôleurs
+
+
+
+
