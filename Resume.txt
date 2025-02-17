@@ -9,4 +9,5 @@ Sprint 1 :
 Sprint 2 :
     Mapping des urls avec les controllers et les methods en utilisant l'annotation GET
     
-
+Sprint 3 :
+    Exécuter la méthode de la classe associée à une URL donnée (utiliser la méthode invoke)

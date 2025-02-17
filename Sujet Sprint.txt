@@ -50,7 +50,7 @@ Si on trouve le Mapping associé à l'URL ,
 - Invoquer la méthode sur l'instance de la classe
 - Afficher la valeur retournée par la méhode
 # Projet Test
-Les méhodes des controlleurs qui seront annotées ont pour type de retour "String"
+Les méthodes des controlleurs qui seront annotées ont pour type de retour "String"
 
 Objectif :
 #sprint_4
