@@ -66,6 +66,7 @@ Sprint 10 :
     Si une méthode n'a pas d'annotation, elle sera considérée comme une méthode GET par défaut
     Ajout des gestions de VERB POST et GET uniquement
 
-
+Sprint 11 :
+    Afficher les erreurs dans une page d'erreur
 
 
