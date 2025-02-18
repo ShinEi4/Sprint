@@ -86,3 +86,4 @@ Sprint 13 :
     
 Sprint 14 :
     Retour vers l'url appellant en cas d'erreur de validation
+    Ajouter annotation @FormUrl pour indiquer l'url du formulaire (nécessaire pour le retour vers le formulaire en cas d'erreur de validation)
