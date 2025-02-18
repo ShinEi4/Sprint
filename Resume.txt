@@ -51,5 +51,16 @@ Sprint 8 :
             * delete(String key) : Supprimer une donnée de la session
             * invalidate() : Détruire la session
 
+Sprint 9 :
+    Ajout du support des API REST :
+        - Création de l'annotation @RestAPI pour marquer les méthodes REST
+        - Intégration de la bibliothèque Gson pour la sérialisation JSON
+        - Modification du FrontController :
+            * Détection des méthodes annotées avec @RestAPI
+            * Sérialisation automatique des réponses en JSON
+            * Support de tout type de retour pour les API REST
+            * Gestion spéciale des ModelView pour extraire uniquement les données
+        
+
 
 

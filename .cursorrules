@@ -8,6 +8,7 @@
 - Java Version: 17
 - Serveur d'Application: Wildfly 26.1.2
 - Dépendances: javax (si nécessaire)
+- On n'utilise pas Maven
 
 ## Déploiement
 - Utilisation de @deploy.bat pour la compilation et le déploiement

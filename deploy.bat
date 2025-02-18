@@ -49,15 +49,21 @@ REM 7. Copier le fichier web.xml
 echo Copie du fichier web.xml dans WEB-INF...
 copy "web.xml" "%PROJECT_NAME%\WEB-INF\"
 
+REM 9. Copier les fichiers de lib dans WEB-INF/lib
+echo Copie des fichiers de bibliothèque externes...
+xcopy "%LIB_PATH%\*.jar" "%PROJECT_NAME%\WEB-INF\lib\" /Y
+
 REM 8. Créer le fichier WAR
 echo Création du fichier WAR...
 cd "%PROJECT_NAME%"
 jar -cvf "%PROJECT_NAME%.war" *
 cd ..
 
-REM 9. Déployer dans Wildfly
+REM 10. Déployer dans Wildfly
 echo Déploiement vers Wildfly...
 copy "%PROJECT_NAME%\%PROJECT_NAME%.war" "%WILDFLY_PATH%"
+
+
 
 echo Déploiement terminé !
 pause
