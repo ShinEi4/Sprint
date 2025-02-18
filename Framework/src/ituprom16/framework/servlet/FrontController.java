@@ -98,9 +98,9 @@ public class FrontController extends HttpServlet {
                 methodUrl = postAnnotation.value();
                 httpMethod = "POST";
             }
-            // Méthode par défaut (GET)
+            // Méthode sans annotation = GET par défaut
             else {
-                methodUrl = "";
+                methodUrl = "/" + method.getName();
                 httpMethod = "GET";
             }
 
@@ -129,6 +129,13 @@ public class FrontController extends HttpServlet {
         String url = uri.substring(contextPath.length());
         String requestMethod = request.getMethod();  // GET ou POST
         
+        // Vérifier si la méthode HTTP est valide (GET ou POST uniquement)
+        if (!requestMethod.equals("GET") && !requestMethod.equals("POST")) {
+            displayError(response, "Méthode HTTP non supportée: " + requestMethod + 
+                ". Seules les méthodes GET et POST sont autorisées.");
+            return;
+        }
+
         // Afficher les erreurs si demandé
         if (url.equals("/errors")) {
             displayErrors(response);
