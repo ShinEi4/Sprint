@@ -84,3 +84,6 @@ Sprint 13 :
     Ajout de la classe ValidationError pour stocker les erreurs de validation
     Ajout de la méthode displayValidationErrors dans le FrontController pour afficher les erreurs de validation
     
+Sprint 14 :
+    Retour vers l'url appellant en cas d'erreur de validation
+    Ajouter annotation @FormUrl pour indiquer l'url du formulaire (nécessaire pour le retour vers le formulaire en cas d'erreur de validation)
