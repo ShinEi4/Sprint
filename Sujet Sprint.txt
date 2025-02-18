@@ -169,3 +169,8 @@ Objectif:
     Certaines pages sont protégées et nécessitent une authentification
     Certaines pages ne sont accessibles que pour certains rôles (niveau d'accès)
         
+Sprint 16 :
+Objectif :
+    Gestion de l'authentification et des rôles (annotation niveau classe)
+    Certaines pages sont protégées et nécessitent une authentification
+    Certaines pages ne sont accessibles que pour certains rôles (niveau d'accès)
