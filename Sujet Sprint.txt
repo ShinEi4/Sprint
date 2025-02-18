@@ -152,3 +152,9 @@ Côté Framework :
 Côté Test :
     Créer un formulaire de upload de fichier
     Prouver que l'upload est réussi
+
+Sprint 13 :
+Objectif : Validation des champs d'un formulaire à l'aide d'annotations
+Côté Framework :
+    -Créer les annotations de validation : @Required, @Min, @Max , @Email
+    -Gérer les erreurs de validation dans une page d'erreur
