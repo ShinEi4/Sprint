@@ -122,17 +122,14 @@ return dataList;
 
 ### Structure recommandée du projet
 ```
-YourProject/
-├── Framework/
-│ └── src/
-│ └── ituprom16/
-│ └── framework/
-├── Test/
+├── YourProject/
 │ ├── src/
 │ │ └── your/
 │ │ └── controllers/
 │ └── views/
+│ └── lib/
 └── web.xml
+└── deploy.bat
 ```
 
 ### Déploiement
