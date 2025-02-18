@@ -24,7 +24,7 @@ Un framework MVC léger et flexible inspiré de Spring MVC, développé pour Wil
 2. Placez le dossier `Framework/` dans votre projet
 3. Configurez `web.xml` :
 
-xml
+    ```xml
 <servlet>
 <servlet-name>FrontController</servlet-name>
 <servlet-class>ituprom16.framework.servlet.FrontController</servlet-class>
@@ -38,7 +38,8 @@ xml
 ## 📖 Guide d'utilisation
 
 ### 1. Création d'un contrôleur
-java
+
+    ```java
 @AnnotationController
 public class TestController {
 @GET("/hello")
@@ -52,10 +53,11 @@ mv.addObject("users", userList);
 return mv;
 }
 }
+```
 
 
 ### 2. Gestion des formulaires
-java
+```java
 @POST("/save")
 public ModelView saveUser(
 @Param(name="username") String username,
@@ -63,10 +65,11 @@ public ModelView saveUser(
 ) {
 // Traitement...
 }
+```
 
 
 ### 3. Authentification et Rôles
-java
+```java
 @AnnotationController
 @Auth // Requiert une authentification
 @Role({"ADMIN"}) // Requiert le rôle ADMIN
@@ -86,10 +89,11 @@ public ModelView getManagerInfo() {
 // Accessible aux managers
 }
 }
+```
 
 
 ### 4. Validation des données
-java
+```java
 public class User {
 @Required
 private String username;
@@ -98,10 +102,11 @@ private String email;
 @Min(18) @Max(100)
 private int age;
 }
+```
 
 
 ### 5. API REST
-java
+```java
 @AnnotationController
 public class ApiController {
 @GET("/api/data")
@@ -111,10 +116,13 @@ public List<String> getData() {
 return dataList;
 }
 }
+```
+
 
 ## 🔧 Configuration
 
 ### Structure recommandée du projet
+```
 YourProject/
 ├── Framework/
 │ └── src/
@@ -126,6 +134,7 @@ YourProject/
 │ │ └── controllers/
 │ └── views/
 └── web.xml
+```
 
 ### Déploiement
 
