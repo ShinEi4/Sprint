@@ -87,3 +87,11 @@ Sprint 13 :
 Sprint 14 :
     Retour vers l'url appellant en cas d'erreur de validation
     Ajouter annotation @FormUrl pour indiquer l'url du formulaire (nécessaire pour le retour vers le formulaire en cas d'erreur de validation)
+
+Sprint 15 :
+    Gestion de l'authentification
+    Gestion des rôles
+    Ajout de l'annotation @Role pour indiquer le rôle nécessaire pour accéder à une méthode
+    Ajout de la classe RoleLevel pour gérer les niveaux de rôles
+    Ajout de la classe AuthManager pour gérer les autorisations
+    

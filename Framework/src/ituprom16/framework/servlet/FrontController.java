@@ -36,6 +36,8 @@ import ituprom16.framework.annotation.Min;
 import ituprom16.framework.annotation.Max;
 import ituprom16.framework.annotation.Email;
 import ituprom16.framework.annotation.FormUrl;
+import ituprom16.framework.annotation.Auth;
+import ituprom16.framework.annotation.Role;
 
 public class FrontController extends HttpServlet {
     private HashMap<String, Mapping> mappingUrls;
@@ -216,6 +218,18 @@ public class FrontController extends HttpServlet {
                 } else {
                     displayValidationErrors(response);
                 }
+                return;
+            }
+            
+            // Vérifier l'authentification
+            if (!checkAuthentication(request, controllerClass, targetMethod)) {
+                response.sendRedirect(request.getContextPath() + "/login");
+                return;
+            }
+
+            // Vérifier les rôles
+            if (!checkRole(request, controllerClass, targetMethod)) {
+                displayError(response, "Accès refusé : vous n'avez pas les droits nécessaires");
                 return;
             }
             
@@ -498,5 +512,50 @@ public class FrontController extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
+    }
+
+    private boolean checkAuthentication(HttpServletRequest request, Class<?> controllerClass, Method method) {
+        // Vérifier l'annotation au niveau de la classe
+        boolean requiresAuth = controllerClass.isAnnotationPresent(Auth.class);
+        
+        // L'annotation de méthode surcharge celle de la classe
+        if (method.isAnnotationPresent(Auth.class)) {
+            requiresAuth = method.getAnnotation(Auth.class).required();
+        }
+        
+        if (requiresAuth) {
+            MySession session = new MySession(request.getSession());
+            return session.get("user") != null;
+        }
+        return true;
+    }
+
+    private boolean checkRole(HttpServletRequest request, Class<?> controllerClass, Method method) {
+        String[] requiredRoles = null;
+        
+        // Vérifier l'annotation au niveau de la classe
+        if (controllerClass.isAnnotationPresent(Role.class)) {
+            requiredRoles = controllerClass.getAnnotation(Role.class).value();
+        }
+        
+        // L'annotation de méthode surcharge celle de la classe
+        if (method.isAnnotationPresent(Role.class)) {
+            requiredRoles = method.getAnnotation(Role.class).value();
+        }
+        
+        if (requiredRoles != null && requiredRoles.length > 0) {
+            MySession session = new MySession(request.getSession());
+            String[] userRoles = (String[]) session.get("roles");
+            if (userRoles == null) return false;
+            
+            // Vérifier si l'utilisateur a au moins un des rôles requis
+            for (String required : requiredRoles) {
+                for (String userRole : userRoles) {
+                    if (required.equals(userRole)) return true;
+                }
+            }
+            return false;
+        }
+        return true;
     }
 } 

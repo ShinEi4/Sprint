@@ -14,28 +14,28 @@ import java.util.List;
 public class AuthController {
     // Simulation d'une base de données
     private static final HashMap<String, String> USERS = new HashMap<>();
-    private static final HashMap<String, List<String>> USER_DATA = new HashMap<>();
+    private static final HashMap<String, String[]> USER_ROLES = new HashMap<>();
     
     static {
         // Ajout de quelques utilisateurs de test
         USERS.put("john", "pass123");
         USERS.put("alice", "pass456");
+        USERS.put("bob", "pass789");
         
-        // Données spécifiques aux utilisateurs
-        List<String> johnData = new ArrayList<>();
-        johnData.add("Projet A");
-        johnData.add("Projet B");
-        USER_DATA.put("john", johnData);
-        
-        List<String> aliceData = new ArrayList<>();
-        aliceData.add("Projet X");
-        aliceData.add("Projet Y");
-        USER_DATA.put("alice", aliceData);
+        // Attribution des rôles
+        USER_ROLES.put("john", new String[]{"ADMIN", "USER_MANAGER"});
+        USER_ROLES.put("alice", new String[]{"USER_MANAGER"});
+        USER_ROLES.put("bob", new String[]{"USER"});
     }
     
     @GET("/login-form")
     public ModelView showLoginForm() {
         return new ModelView("/login.jsp");
+    }
+
+    @GET("/index")
+    public ModelView showIndex() {
+        return new ModelView("/admin/index.jsp");
     }
 
     @POST("/login")
@@ -48,8 +48,8 @@ public class AuthController {
         
         if (USERS.containsKey(username) && USERS.get(username).equals(password)) {
             session.add("user", username);
-            session.add("userData", USER_DATA.get(username));
-            mv.setUrl("/dashboard.jsp");
+            session.add("roles", USER_ROLES.get(username));
+            mv.setUrl("/admin/index.jsp");
         } else {
             mv.addObject("error", "Identifiants invalides");
         }
@@ -61,18 +61,5 @@ public class AuthController {
     public ModelView logout(MySession session) {
         session.invalidate();
         return new ModelView("/login.jsp");
-    }
-    
-    @GET("/dashboard")
-    public ModelView dashboard(MySession session) {
-        String user = (String) session.get("user");
-        if (user == null) {
-            return new ModelView("/login.jsp");
-        }
-        
-        ModelView mv = new ModelView("/dashboard.jsp");
-        mv.addObject("username", user);
-        mv.addObject("userProjects", session.get("userData"));
-        return mv;
     }
 } 
