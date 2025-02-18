@@ -6,9 +6,9 @@
 </head>
 <body>
     <h1>Formulaire de test</h1>
-    <form action="save-name" method="get">
+    <form action="submit" method="put">
         <label for="name">Votre nom :</label>
-        <input type="text" id="name" name="userName" required>
+        <input type="text" id="name" name="name" required>
         <button type="submit">Envoyer</button>
     </form>
 </body>

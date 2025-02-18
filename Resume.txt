@@ -61,6 +61,11 @@ Sprint 9 :
             * Support de tout type de retour pour les API REST
             * Gestion spéciale des ModelView pour extraire uniquement les données
         
+Sprint 10 :
+    Ajout de l'annotation @POST 
+    Si une méthode n'a pas d'annotation, elle sera considérée comme une méthode GET par défaut
+    Ajout des gestions de VERB POST et GET uniquement
+
 
 
 

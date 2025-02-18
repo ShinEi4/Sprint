@@ -130,8 +130,8 @@ Etapes pour la realisation:
             -> si modelView, transformer en JSON la valeur de l'attribut data
 
 Sprint 10 :
-Coté developpeur :
-On peut mettre une annotation sur la methode : @GET sy @POST
+Coté Test :
+On peut mettre une annotation sur la methode : @GET et @POST
 S'il n'y a pas d'annotation, on utilsera GET par défaut (Comme ce qu'on a fait auparavant)
 Coté framework :
 Il faut identifier si la methode soit GET soit POST et l' Url dependra de ca

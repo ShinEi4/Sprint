@@ -24,6 +24,7 @@ import java.lang.reflect.Field;
 import ituprom16.framework.session.MySession;
 import com.google.gson.Gson;
 import ituprom16.framework.annotation.RestAPI;
+import ituprom16.framework.annotation.POST;
 
 public class FrontController extends HttpServlet {
     private HashMap<String, Mapping> mappingUrls;
@@ -82,32 +83,41 @@ public class FrontController extends HttpServlet {
     private void scanMethodsWithUrlCheck(Class<?> controller, HashMap<String, String> urlMethods) {
         String controllerName = controller.getSimpleName();
         for (Method method : controller.getDeclaredMethods()) {
+            String methodUrl = null;
+            String httpMethod = null;
+
+            // Vérifier GET
             if (method.isAnnotationPresent(GET.class)) {
                 GET getAnnotation = method.getAnnotation(GET.class);
-                String methodUrl = getAnnotation.value();
+                methodUrl = getAnnotation.value();
+                httpMethod = "GET";
+            }
+            // Vérifier POST
+            else if (method.isAnnotationPresent(POST.class)) {
+                POST postAnnotation = method.getAnnotation(POST.class);
+                methodUrl = postAnnotation.value();
+                httpMethod = "POST";
+            }
+            // Méthode sans annotation = GET par défaut
+            else {
+                methodUrl = "/" + method.getName();
+                httpMethod = "GET";
+            }
+
+            if (methodUrl != null) {
                 String fullUrl = "/" + controllerName + methodUrl;
 
-                // Vérifier le type de retour seulement si @RestAPI n'est pas présent
-                if (!method.isAnnotationPresent(RestAPI.class)) {
-                    if (!method.getReturnType().equals(String.class) && 
-                        !method.getReturnType().equals(ModelView.class)) {
-                        addError(controllerName + methodUrl, 
-                            "Type de retour non valide pour la méthode " + method.getName() + 
-                            " dans " + controllerName + ". Seuls String et ModelView sont autorisés.");
-                        continue;
-                    }
-                }
-
-                // Vérifier si l'URL existe déjà
-                if (urlMethods.containsKey(fullUrl)) {
+                // Vérifier si l'URL existe déjà avec la même méthode HTTP
+                String existingMapping = urlMethods.get(fullUrl);
+                if (existingMapping != null) {
                     addError(fullUrl, "URL en double détectée: " + fullUrl + 
                         " dans " + controllerName + "." + method.getName() + 
-                        " et " + urlMethods.get(fullUrl));
+                        " et " + existingMapping);
                     continue;
                 }
 
                 urlMethods.put(fullUrl, controllerName + "." + method.getName());
-                mappingUrls.put(fullUrl, new Mapping(controller.getName(), method.getName()));
+                mappingUrls.put(fullUrl, new Mapping(controller.getName(), method.getName(), httpMethod));
             }
         }
     }
@@ -117,7 +127,15 @@ public class FrontController extends HttpServlet {
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();
         String url = uri.substring(contextPath.length());
+        String requestMethod = request.getMethod();  // GET ou POST
         
+        // Vérifier si la méthode HTTP est valide (GET ou POST uniquement)
+        if (!requestMethod.equals("GET") && !requestMethod.equals("POST")) {
+            displayError(response, "Méthode HTTP non supportée: " + requestMethod + 
+                ". Seules les méthodes GET et POST sont autorisées.");
+            return;
+        }
+
         // Afficher les erreurs si demandé
         if (url.equals("/errors")) {
             displayErrors(response);
@@ -148,6 +166,13 @@ public class FrontController extends HttpServlet {
         Mapping mapping = mappingUrls.get(url);
         if (mapping == null) {
             displayError(response, "Aucune méthode n'est associée à l'URL: " + url);
+            return;
+        }
+
+        // Vérifier si la méthode HTTP correspond
+        if (!mapping.getHttpMethod().equals(requestMethod)) {
+            displayError(response, "Méthode HTTP incorrecte. L'URL " + url + 
+                " attend " + mapping.getHttpMethod() + " mais a reçu " + requestMethod);
             return;
         }
 
