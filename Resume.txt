@@ -69,4 +69,8 @@ Sprint 10 :
 Sprint 11 :
     Afficher les erreurs dans une page d'erreur
 
-
+Sprint 12 :
+    Gestion d'upload de fichier :
+    Verification si le formulaire a bien l'attribut enctype="multipart/form-data"
+    Gerer la récupération des fichiers
+    
