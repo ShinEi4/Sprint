@@ -22,6 +22,8 @@ import ituprom16.framework.annotation.ModelAttribute;
 import ituprom16.framework.annotation.RequestParam;
 import java.lang.reflect.Field;
 import ituprom16.framework.session.MySession;
+import com.google.gson.Gson;
+import ituprom16.framework.annotation.RestAPI;
 
 public class FrontController extends HttpServlet {
     private HashMap<String, Mapping> mappingUrls;
@@ -85,13 +87,15 @@ public class FrontController extends HttpServlet {
                 String methodUrl = getAnnotation.value();
                 String fullUrl = "/" + controllerName + methodUrl;
 
-                // Vérifier le type de retour
-                if (!method.getReturnType().equals(String.class) && 
-                    !method.getReturnType().equals(ModelView.class)) {
-                    addError(controllerName + methodUrl, 
-                        "Type de retour non valide pour la méthode " + method.getName() + 
-                        " dans " + controllerName + ". Seuls String et ModelView sont autorisés.");
-                    continue;
+                // Vérifier le type de retour seulement si @RestAPI n'est pas présent
+                if (!method.isAnnotationPresent(RestAPI.class)) {
+                    if (!method.getReturnType().equals(String.class) && 
+                        !method.getReturnType().equals(ModelView.class)) {
+                        addError(controllerName + methodUrl, 
+                            "Type de retour non valide pour la méthode " + method.getName() + 
+                            " dans " + controllerName + ". Seuls String et ModelView sont autorisés.");
+                        continue;
+                    }
                 }
 
                 // Vérifier si l'URL existe déjà
@@ -173,41 +177,59 @@ public class FrontController extends HttpServlet {
             // Préparer les arguments de la méthode
             Object[] methodArgs = prepareMethodArguments(targetMethod, request);
             
-            // Invoquer la méthode sur l'instance avec les arguments
+            // Vérifier si la méthode est annotée avec @RestAPI
+            boolean isRestAPI = targetMethod.isAnnotationPresent(RestAPI.class);
+            // Invoquer la méthode
             Object result = targetMethod.invoke(controllerInstance, methodArgs);
             
-            // Traiter le résultat selon son type
-            if (result instanceof String) {
-                // Si c'est une String, l'afficher directement
-                response.setContentType("text/html;charset=UTF-8");
-                try (PrintWriter out = response.getWriter()) {
-                    out.println("<!DOCTYPE html>");
-                    out.println("<html><head><title>Résultat</title></head><body>");
-                    out.println(result);
-                    out.println("</body></html>");
-                }
-            } 
-            else if (result instanceof ModelView) {
-                // Si c'est un ModelView, dispatcher vers l'URL spécifiée
-                ModelView modelView = (ModelView) result;
+            if (isRestAPI) {
+                // Traitement REST API
+                Gson gson = new Gson();
+                response.setContentType("application/json;charset=UTF-8");
+                PrintWriter out = response.getWriter();
                 
-                // Ajouter les données dans la requête
-                for (Map.Entry<String, Object> entry : modelView.getData().entrySet()) {
-                    request.setAttribute(entry.getKey(), entry.getValue());
+                if (result instanceof ModelView) {
+                    // Si c'est un ModelView, sérialiser uniquement les données
+                    ModelView mv = (ModelView) result;
+                    out.println(gson.toJson(mv.getData()));
+                } else {
+                    // Sinon, sérialiser directement le résultat
+                    out.println(gson.toJson(result));
                 }
-                
-                // Dispatcher vers l'URL
-                RequestDispatcher dispatcher = request.getRequestDispatcher(modelView.getUrl());
-                dispatcher.forward(request, response);
-            }
-            else {
-                // Type non reconnu
-                response.setContentType("text/html;charset=UTF-8");
-                try (PrintWriter out = response.getWriter()) {
-                    out.println("<!DOCTYPE html>");
-                    out.println("<html><head><title>Erreur</title></head><body>");
-                    out.println("<p>Type de retour non reconnu</p>");
-                    out.println("</body></html>");
+            } else {
+                // Traitement normal existant
+                if (result instanceof String) {
+                    // Si c'est une String, l'afficher directement
+                    response.setContentType("text/html;charset=UTF-8");
+                    try (PrintWriter out = response.getWriter()) {
+                        out.println("<!DOCTYPE html>");
+                        out.println("<html><head><title>Résultat</title></head><body>");
+                        out.println(result);
+                        out.println("</body></html>");
+                    }
+                } 
+                else if (result instanceof ModelView) {
+                    // Si c'est un ModelView, dispatcher vers l'URL spécifiée
+                    ModelView modelView = (ModelView) result;
+                    
+                    // Ajouter les données dans la requête
+                    for (Map.Entry<String, Object> entry : modelView.getData().entrySet()) {
+                        request.setAttribute(entry.getKey(), entry.getValue());
+                    }
+                    
+                    // Dispatcher vers l'URL
+                    RequestDispatcher dispatcher = request.getRequestDispatcher(modelView.getUrl());
+                    dispatcher.forward(request, response);
+                }
+                else {
+                    // Type non reconnu
+                    response.setContentType("text/html;charset=UTF-8");
+                    try (PrintWriter out = response.getWriter()) {
+                        out.println("<!DOCTYPE html>");
+                        out.println("<html><head><title>Erreur</title></head><body>");
+                        out.println("<p>Type de retour non reconnu</p>");
+                        out.println("</body></html>");
+                    }
                 }
             }
             
