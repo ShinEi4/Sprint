@@ -35,6 +35,7 @@ import ituprom16.framework.annotation.Required;
 import ituprom16.framework.annotation.Min;
 import ituprom16.framework.annotation.Max;
 import ituprom16.framework.annotation.Email;
+import ituprom16.framework.annotation.FormUrl;
 
 public class FrontController extends HttpServlet {
     private HashMap<String, Mapping> mappingUrls;
@@ -180,7 +181,41 @@ public class FrontController extends HttpServlet {
             
             // Vérifier s'il y a des erreurs de validation
             if (!validationErrors.isEmpty()) {
-                displayValidationErrors(response);
+                request.setAttribute("validationErrors", validationErrors);
+                // Vérifier si la méthode a une annotation FormUrl
+                if (targetMethod.isAnnotationPresent(FormUrl.class)) {
+                    String formPath = targetMethod.getAnnotation(FormUrl.class).value();
+                    System.out.println("Chemin du formulaire: " + formPath);
+                    
+                    // Créer une nouvelle requête GET vers le formulaire
+                    request.setAttribute("method", "GET");
+                    Mapping formMapping = mappingUrls.get(formPath);
+                    if (formMapping != null) {
+                        try {
+                            Class<?> formControllerClass = Class.forName(formMapping.getClassName());
+                            Method formMethod = null;
+                            for (Method method : formControllerClass.getDeclaredMethods()) {
+                                if (method.getName().equals(formMapping.getMethodName())) {
+                                    formMethod = method;
+                                    break;
+                                }
+                            }
+                            if (formMethod != null) {
+                                Object formControllerInstance = formControllerClass.getDeclaredConstructor().newInstance();
+                                Object formResult = formMethod.invoke(formControllerInstance);
+                                handleMethodResult(formResult, request, response, formMethod);
+                                return;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            displayValidationErrors(response);
+                        }
+                    } else {
+                        displayValidationErrors(response);
+                    }
+                } else {
+                    displayValidationErrors(response);
+                }
                 return;
             }
             

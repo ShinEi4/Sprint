@@ -8,6 +8,7 @@ import ituprom16.framework.annotation.Required;
 import ituprom16.framework.annotation.Min;
 import ituprom16.framework.annotation.Max;
 import ituprom16.framework.annotation.Email;
+import ituprom16.framework.annotation.FormUrl;
 import ituprom16.framework.model.ModelView;
 
 @AnnotationController
@@ -19,6 +20,7 @@ public class ValidationTestController {
     }
     
     @POST("/validate")
+    @FormUrl("/ValidationTestController/validation-form")
     public ModelView validateForm(
         @Required
         @Param(name="name") String name,

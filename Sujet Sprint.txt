@@ -158,3 +158,8 @@ Objectif : Validation des champs d'un formulaire à l'aide d'annotations
 Côté Framework :
     -Créer les annotations de validation : @Required, @Min, @Max , @Email
     -Gérer les erreurs de validation dans une page d'erreur
+
+Sprint 14 :
+Objectif :
+    -Retourner vers l'url appellant en cas d'erreur de validation
+
