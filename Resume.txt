@@ -95,3 +95,7 @@ Sprint 15 :
     Ajout de la classe RoleLevel pour gérer les niveaux de rôles
     Ajout de la classe AuthManager pour gérer les autorisations
     
+Sprint 16 :
+    Gestion de l'authentification et des rôles (annotation niveau classe)
+    Déjà fait dans le sprint 15
+
