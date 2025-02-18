@@ -70,7 +70,15 @@ Sprint 11 :
     Afficher les erreurs dans une page d'erreur
 
 Sprint 12 :
-    Gestion d'upload de fichier :
-    Verification si le formulaire a bien l'attribut enctype="multipart/form-data"
-    Gerer la récupération des fichiers
+    Gestion d'upload de fichier
+
+Sprint 13 :
+    Gestion de la validation des données
+    Ajout des annotations :
+        - @Required : Indique que le champ est obligatoire
+        - @Min : Indique la valeur minimale
+        - @Max : Indique la valeur maximale
+        - @Email : Indique que le champ doit être une adresse email valide
+    Ajout de la classe ValidationError pour stocker les erreurs de validation
+    Ajout de la méthode displayValidationErrors dans le FrontController pour afficher les erreurs de validation
     

@@ -27,11 +27,22 @@ import ituprom16.framework.annotation.RestAPI;
 import ituprom16.framework.annotation.POST;
 import javax.servlet.http.Part;
 import java.io.InputStream;
+import ituprom16.framework.validation.ValidationError;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
+import ituprom16.framework.annotation.Required;
+import ituprom16.framework.annotation.Min;
+import ituprom16.framework.annotation.Max;
+import ituprom16.framework.annotation.Email;
 
 public class FrontController extends HttpServlet {
     private HashMap<String, Mapping> mappingUrls;
     private String controllerPackage;
     private HashMap<String, String> errorMessages;  // Pour stocker les messages d'erreur
+    private static final Pattern EMAIL_PATTERN = 
+        Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
+    private List<ValidationError> validationErrors;
     
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -39,6 +50,7 @@ public class FrontController extends HttpServlet {
         controllerPackage = config.getInitParameter("controllerPackage");
         mappingUrls = new HashMap<>();
         errorMessages = new HashMap<>();  // Initialisation des messages d'erreur
+        validationErrors = new ArrayList<>();
         
         if (controllerPackage == null || controllerPackage.trim().isEmpty()) {
             addError("package", "Le package des contrôleurs n'est pas spécifié dans web.xml");
@@ -126,52 +138,20 @@ public class FrontController extends HttpServlet {
     
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        validationErrors.clear();  // Réinitialiser les erreurs
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();
         String url = uri.substring(contextPath.length());
-        String requestMethod = request.getMethod();  // GET ou POST
-        
-        // Vérifier si la méthode HTTP est valide (GET ou POST uniquement)
-        if (!requestMethod.equals("GET") && !requestMethod.equals("POST")) {
-            displayError(response, "Méthode HTTP non supportée: " + requestMethod + 
-                ". Seules les méthodes GET et POST sont autorisées.");
-            return;
-        }
+        String requestMethod = request.getMethod();
 
-        // Afficher les erreurs si demandé
-        if (url.equals("/errors")) {
-            displayErrors(response);
-            return;
-        }
-
-        // Vérifier d'abord s'il y a une erreur pour cette URL
-        String methodError = errorMessages.get(url);
-        if (methodError != null) {
-            displayError(response, methodError);
-            return;
-        }
-
-        // Vérifier si une méthode est associée à l'URL
-        String[] urlParts = url.split("/");
-        if (urlParts.length >= 3) {
-            String controllerName = urlParts[1];
-            String methodPath = url.substring(url.indexOf("/", 1));
-            String potentialError = controllerName + methodPath;
-            
-            if (errorMessages.containsKey(potentialError)) {
-                displayError(response, errorMessages.get(potentialError));
-                return;
-            }
-        }
-
-        // Si aucune erreur n'est trouvée, continuer avec le traitement normal
+        // Récupérer le mapping avant tout
         Mapping mapping = mappingUrls.get(url);
         if (mapping == null) {
             displayError(response, "Aucune méthode n'est associée à l'URL: " + url);
             return;
         }
 
-        // Vérifier si la méthode HTTP correspond
+        // Vérifier la méthode HTTP
         if (!mapping.getHttpMethod().equals(requestMethod)) {
             displayError(response, "Méthode HTTP incorrecte. L'URL " + url + 
                 " attend " + mapping.getHttpMethod() + " mais a reçu " + requestMethod);
@@ -179,18 +159,12 @@ public class FrontController extends HttpServlet {
         }
 
         try {
-            // Récupérer la classe par son nom
+            // Récupérer la classe et la méthode
             Class<?> controllerClass = Class.forName(mapping.getClassName());
-            
-            // Créer une instance de la classe
-            Object controllerInstance = controllerClass.getDeclaredConstructor().newInstance();
-            
-            // Récupérer toutes les méthodes de la classe
-            Method[] methods = controllerClass.getDeclaredMethods();
             Method targetMethod = null;
             
             // Trouver la méthode avec le bon nom
-            for (Method method : methods) {
+            for (Method method : controllerClass.getDeclaredMethods()) {
                 if (method.getName().equals(mapping.getMethodName())) {
                     targetMethod = method;
                     break;
@@ -201,72 +175,29 @@ public class FrontController extends HttpServlet {
                 throw new Exception("Méthode " + mapping.getMethodName() + " non trouvée");
             }
             
-            // Préparer les arguments de la méthode
-            Object[] methodArgs = prepareMethodArguments(targetMethod, request,response);
+            // Préparer les arguments et valider
+            Object[] args = prepareMethodArguments(targetMethod, request);
             
-            // Vérifier si la méthode est annotée avec @RestAPI
-            boolean isRestAPI = targetMethod.isAnnotationPresent(RestAPI.class);
-            // Invoquer la méthode
-            Object result = targetMethod.invoke(controllerInstance, methodArgs);
-            
-            if (isRestAPI) {
-                // Traitement REST API
-                Gson gson = new Gson();
-                response.setContentType("application/json;charset=UTF-8");
-                PrintWriter out = response.getWriter();
-                
-                if (result instanceof ModelView) {
-                    // Si c'est un ModelView, sérialiser uniquement les données
-                    ModelView mv = (ModelView) result;
-                    out.println(gson.toJson(mv.getData()));
-                } else {
-                    // Sinon, sérialiser directement le résultat
-                    out.println(gson.toJson(result));
-                }
-            } else {
-                // Traitement normal existant
-                if (result instanceof String) {
-                    // Si c'est une String, l'afficher directement
-                    response.setContentType("text/html;charset=UTF-8");
-                    try (PrintWriter out = response.getWriter()) {
-                        out.println("<!DOCTYPE html>");
-                        out.println("<html><head><title>Résultat</title></head><body>");
-                        out.println(result);
-                        out.println("</body></html>");
-                    }
-                } 
-                else if (result instanceof ModelView) {
-                    // Si c'est un ModelView, dispatcher vers l'URL spécifiée
-                    ModelView modelView = (ModelView) result;
-                    
-                    // Ajouter les données dans la requête
-                    for (Map.Entry<String, Object> entry : modelView.getData().entrySet()) {
-                        request.setAttribute(entry.getKey(), entry.getValue());
-                    }
-                    
-                    // Dispatcher vers l'URL
-                    RequestDispatcher dispatcher = request.getRequestDispatcher(modelView.getUrl());
-                    dispatcher.forward(request, response);
-                }
-                else {
-                    // Type non reconnu
-                    response.setContentType("text/html;charset=UTF-8");
-                    try (PrintWriter out = response.getWriter()) {
-                        out.println("<!DOCTYPE html>");
-                        out.println("<html><head><title>Erreur</title></head><body>");
-                        out.println("<p>Type de retour non reconnu</p>");
-                        out.println("</body></html>");
-                    }
-                }
+            // Vérifier s'il y a des erreurs de validation
+            if (!validationErrors.isEmpty()) {
+                displayValidationErrors(response);
+                return;
             }
             
+            // Si pas d'erreur, exécuter la méthode
+            Object controllerInstance = controllerClass.getDeclaredConstructor().newInstance();
+            Object result = targetMethod.invoke(controllerInstance, args);
+            
+            // Traiter le résultat...
+            handleMethodResult(result, request, response, targetMethod);
+
         } catch (Exception e) {
+            e.printStackTrace();
             displayError(response, "Erreur: " + e.getMessage());
-            e.printStackTrace(); // Pour le débogage
         }
     }
 
-    private Object[] prepareMethodArguments(Method method, HttpServletRequest request, HttpServletResponse response) {
+    private Object[] prepareMethodArguments(Method method, HttpServletRequest request) {
         Parameter[] parameters = method.getParameters();
         Object[] args = new Object[parameters.length];
         
@@ -274,10 +205,10 @@ public class FrontController extends HttpServlet {
             Parameter param = parameters[i];
             try {
                 if (param.isAnnotationPresent(Param.class)) {
-                    args[i] = handleParamAnnotation(param, request, response);
+                    args[i] = handleParamAnnotation(param, request);
                 }
                 else if (param.isAnnotationPresent(ModelAttribute.class)) {
-                    args[i] = handleModelAttribute(param.getType(), request, response);
+                    args[i] = handleModelAttribute(param.getType(), request);
                 }
                 else if (param.getType().equals(MySession.class)) {
                     args[i] = new MySession(request.getSession());
@@ -290,10 +221,20 @@ public class FrontController extends HttpServlet {
         return args;
     }
 
-    private Object handleParamAnnotation(Parameter param, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    private Object handleParamAnnotation(Parameter param, HttpServletRequest request) {
         Param annotation = param.getAnnotation(Param.class);
         String paramName = annotation.name();
+        String paramValue = request.getParameter(paramName);
         
+        // Vérifier d'abord si le champ est requis
+        if (param.isAnnotationPresent(Required.class)) {
+            Required required = param.getAnnotation(Required.class);
+            if (paramValue == null || paramValue.trim().isEmpty()) {
+                validationErrors.add(new ValidationError(paramName, required.message()));
+                return null;
+            }
+        }
+
         // Vérifier si c'est un fichier (multipart)
         if (param.getType().equals(byte[].class) || 
             (param.getType().equals(String.class) && request.getContentType() != null && 
@@ -311,19 +252,22 @@ public class FrontController extends HttpServlet {
                         return filePart.getSubmittedFileName();
                     }
                 }
-                return null;
             } catch (Exception e) {
-                displayError(response, "Erreur lors de l'upload du fichier : " + e.getMessage());
-                throw new Exception("Erreur lors de l'upload du fichier : " + e.getMessage());
+                e.printStackTrace();
             }
+            return null;
         }
 
-        // Pour les paramètres non-fichiers
-        String paramValue = request.getParameter(paramName);
-        return convertParamValue(paramValue, param.getType());
+        // Convertir la valeur
+        Object value = convertParamValue(paramValue, param.getType());
+        
+        // Valider le champ
+        validateField(paramName, value, param);
+        
+        return value;
     }
 
-    private Object handleModelAttribute(Class<?> modelClass, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    private Object handleModelAttribute(Class<?> modelClass, HttpServletRequest request) {
         try {
             Object instance = modelClass.getDeclaredConstructor().newInstance();
             
@@ -345,8 +289,8 @@ public class FrontController extends HttpServlet {
             
             return instance;
         } catch (Exception e) {
-            displayError(response, "Erreur lors de la création de l'instance de " + modelClass.getName() + " : " + e.getMessage());
-            throw new Exception("Erreur lors de la création de l'instance de " + modelClass.getName() + " : " + e.getMessage());
+            e.printStackTrace();
+            return null;
         }
     }
 
@@ -363,6 +307,38 @@ public class FrontController extends HttpServlet {
         // Ajouter d'autres conversions si nécessaire
         
         return value;
+    }
+
+    private void validateField(String fieldName, Object value, Parameter param) {
+        if (value != null) {
+            // Validation Min
+            if (param.isAnnotationPresent(Min.class)) {
+                Min min = param.getAnnotation(Min.class);
+                double numValue = Double.parseDouble(value.toString());
+                if (numValue < min.value()) {
+                    validationErrors.add(new ValidationError(fieldName, 
+                        min.message().replace("{value}", String.valueOf(min.value()))));
+                }
+            }
+            
+            // Validation Max
+            if (param.isAnnotationPresent(Max.class)) {
+                Max max = param.getAnnotation(Max.class);
+                double numValue = Double.parseDouble(value.toString());
+                if (numValue > max.value()) {
+                    validationErrors.add(new ValidationError(fieldName, 
+                        max.message().replace("{value}", String.valueOf(max.value()))));
+                }
+            }
+            
+            // Validation Email
+            if (param.isAnnotationPresent(Email.class)) {
+                Email email = param.getAnnotation(Email.class);
+                if (!EMAIL_PATTERN.matcher(value.toString()).matches()) {
+                    validationErrors.add(new ValidationError(fieldName, email.message()));
+                }
+            }
+        }
     }
 
     private void displayError(HttpServletResponse response, String message) throws IOException {
@@ -405,6 +381,75 @@ public class FrontController extends HttpServlet {
             }
             
             out.println("</body></html>");
+        }
+    }
+
+    private void displayValidationErrors(HttpServletResponse response) throws IOException {
+        response.setContentType("text/html;charset=UTF-8");
+        try (PrintWriter out = response.getWriter()) {
+            out.println("<!DOCTYPE html>");
+            out.println("<html><head><title>Erreurs de validation</title>");
+            out.println("<style>");
+            out.println(".error-container { margin: 20px; padding: 20px; border: 2px solid red; }");
+            out.println(".error-title { color: red; font-size: 1.2em; margin-bottom: 10px; }");
+            out.println(".error-item { color: #d00; margin: 5px 0; padding: 5px; background: #fee; }");
+            out.println("</style>");
+            out.println("</head><body>");
+            out.println("<div class='error-container'>");
+            out.println("<div class='error-title'>Erreurs de validation :</div>");
+            for (ValidationError error : validationErrors) {
+                out.println("<div class='error-item'>");
+                out.println( error.getField() + " : " + error.getMessage());
+                out.println("</div>");
+            }
+            out.println("</div>");
+            out.println("</body></html>");
+        }
+    }
+
+    private void handleMethodResult(Object result, HttpServletRequest request, HttpServletResponse response, Method targetMethod) 
+            throws ServletException, IOException {
+        if (result instanceof String) {
+            // Si c'est une String, l'afficher directement
+            response.setContentType("text/html;charset=UTF-8");
+            try (PrintWriter out = response.getWriter()) {
+                out.println("<!DOCTYPE html>");
+                out.println("<html><head><title>Résultat</title></head><body>");
+                out.println(result);
+                out.println("</body></html>");
+            }
+        } 
+        else if (result instanceof ModelView) {
+            // Si c'est un ModelView, dispatcher vers l'URL spécifiée
+            ModelView modelView = (ModelView) result;
+            
+            // Ajouter les données dans la requête
+            for (Map.Entry<String, Object> entry : modelView.getData().entrySet()) {
+                request.setAttribute(entry.getKey(), entry.getValue());
+            }
+            
+            // Dispatcher vers l'URL
+            RequestDispatcher dispatcher = request.getRequestDispatcher(modelView.getUrl());
+            dispatcher.forward(request, response);
+        }
+        else if (targetMethod.isAnnotationPresent(RestAPI.class)) {
+            // Traitement REST API
+            Gson gson = new Gson();
+            response.setContentType("application/json;charset=UTF-8");
+            PrintWriter out = response.getWriter();
+            
+            if (result instanceof ModelView) {
+                // Si c'est un ModelView, sérialiser uniquement les données
+                ModelView mv = (ModelView) result;
+                out.println(gson.toJson(mv.getData()));
+            } else {
+                // Sinon, sérialiser directement le résultat
+                out.println(gson.toJson(result));
+            }
+        }
+        else {
+            // Type non reconnu
+            displayError(response, "Type de retour non reconnu");
         }
     }
 
