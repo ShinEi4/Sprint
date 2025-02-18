@@ -24,7 +24,7 @@ Un framework MVC léger et flexible inspiré de Spring MVC, développé pour Wil
 2. Placez le dossier `Framework/` dans votre projet
 3. Configurez `web.xml` :
 
-    ```xml
+```xml
 <servlet>
 <servlet-name>FrontController</servlet-name>
 <servlet-class>ituprom16.framework.servlet.FrontController</servlet-class>
@@ -33,13 +33,12 @@ Un framework MVC léger et flexible inspiré de Spring MVC, développé pour Wil
 <param-value>votre.package.controllers</param-value>
 </init-param>
 </servlet>
-
+```
 
 ## 📖 Guide d'utilisation
 
 ### 1. Création d'un contrôleur
-
-    ```java
+```java
 @AnnotationController
 public class TestController {
 @GET("/hello")
