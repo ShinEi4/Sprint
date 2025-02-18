@@ -163,3 +163,9 @@ Sprint 14 :
 Objectif :
     -Retourner vers l'url appellant en cas d'erreur de validation
 
+Sprint 15 :
+Objectif:
+    Authentification et gestion de rôle (annotation niveau méthode)
+    Certaines pages sont protégées et nécessitent une authentification
+    Certaines pages ne sont accessibles que pour certains rôles (niveau d'accès)
+        
