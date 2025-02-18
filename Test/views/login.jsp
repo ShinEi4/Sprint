@@ -15,7 +15,7 @@
         <div class="error">${error}</div>
     <% } %>
     
-    <form action="login" method="get">
+    <form action="login" method="post">
         <div class="form-group">
             <label for="username">Identifiant:</label>
             <input type="text" id="username" name="username" required>

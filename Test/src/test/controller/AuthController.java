@@ -2,6 +2,7 @@ package test.controller;
 
 import ituprom16.framework.annotation.AnnotationController;
 import ituprom16.framework.annotation.GET;
+import ituprom16.framework.annotation.POST;
 import ituprom16.framework.annotation.Param;
 import ituprom16.framework.model.ModelView;
 import ituprom16.framework.session.MySession;
@@ -36,8 +37,8 @@ public class AuthController {
     public ModelView showLoginForm() {
         return new ModelView("/login.jsp");
     }
-    
-    @GET("/login")
+
+    @POST("/login")
     public ModelView login(
         @Param(name="username") String username,
         @Param(name="password") String password,
