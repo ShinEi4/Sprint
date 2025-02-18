@@ -25,6 +25,8 @@ import ituprom16.framework.session.MySession;
 import com.google.gson.Gson;
 import ituprom16.framework.annotation.RestAPI;
 import ituprom16.framework.annotation.POST;
+import javax.servlet.http.Part;
+import java.io.InputStream;
 
 public class FrontController extends HttpServlet {
     private HashMap<String, Mapping> mappingUrls;
@@ -200,7 +202,7 @@ public class FrontController extends HttpServlet {
             }
             
             // Préparer les arguments de la méthode
-            Object[] methodArgs = prepareMethodArguments(targetMethod, request);
+            Object[] methodArgs = prepareMethodArguments(targetMethod, request,response);
             
             // Vérifier si la méthode est annotée avec @RestAPI
             boolean isRestAPI = targetMethod.isAnnotationPresent(RestAPI.class);
@@ -264,34 +266,64 @@ public class FrontController extends HttpServlet {
         }
     }
 
-    private Object[] prepareMethodArguments(Method method, HttpServletRequest request) {
+    private Object[] prepareMethodArguments(Method method, HttpServletRequest request, HttpServletResponse response) {
         Parameter[] parameters = method.getParameters();
         Object[] args = new Object[parameters.length];
         
         for (int i = 0; i < parameters.length; i++) {
             Parameter param = parameters[i];
-            if (param.isAnnotationPresent(Param.class)) {
-                args[i] = handleParamAnnotation(param, request);
-            }
-            else if (param.isAnnotationPresent(ModelAttribute.class)) {
-                args[i] = handleModelAttribute(param.getType(), request);
-            }
-            else if (param.getType().equals(MySession.class)) {
-                args[i] = new MySession(request.getSession());
+            try {
+                if (param.isAnnotationPresent(Param.class)) {
+                    args[i] = handleParamAnnotation(param, request, response);
+                }
+                else if (param.isAnnotationPresent(ModelAttribute.class)) {
+                    args[i] = handleModelAttribute(param.getType(), request, response);
+                }
+                else if (param.getType().equals(MySession.class)) {
+                    args[i] = new MySession(request.getSession());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
         
         return args;
     }
 
-    private Object handleParamAnnotation(Parameter param, HttpServletRequest request) {
+    private Object handleParamAnnotation(Parameter param, HttpServletRequest request, HttpServletResponse response) throws Exception {
         Param annotation = param.getAnnotation(Param.class);
         String paramName = annotation.name();
+        
+        // Vérifier si c'est un fichier (multipart)
+        if (param.getType().equals(byte[].class) || 
+            (param.getType().equals(String.class) && request.getContentType() != null && 
+             request.getContentType().startsWith("multipart/form-data"))) {
+            try {
+                Part filePart = request.getPart(paramName);
+                if (filePart != null) {
+                    // Si le paramètre attend un tableau de bytes
+                    if (param.getType().equals(byte[].class)) {
+                        InputStream inputStream = filePart.getInputStream();
+                        return inputStream.readAllBytes();
+                    }
+                    // Si le paramètre attend le nom du fichier
+                    else if (param.getType().equals(String.class)) {
+                        return filePart.getSubmittedFileName();
+                    }
+                }
+                return null;
+            } catch (Exception e) {
+                displayError(response, "Erreur lors de l'upload du fichier : " + e.getMessage());
+                throw new Exception("Erreur lors de l'upload du fichier : " + e.getMessage());
+            }
+        }
+
+        // Pour les paramètres non-fichiers
         String paramValue = request.getParameter(paramName);
         return convertParamValue(paramValue, param.getType());
     }
 
-    private Object handleModelAttribute(Class<?> modelClass, HttpServletRequest request) {
+    private Object handleModelAttribute(Class<?> modelClass, HttpServletRequest request, HttpServletResponse response) throws Exception {
         try {
             Object instance = modelClass.getDeclaredConstructor().newInstance();
             
@@ -313,8 +345,8 @@ public class FrontController extends HttpServlet {
             
             return instance;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            displayError(response, "Erreur lors de la création de l'instance de " + modelClass.getName() + " : " + e.getMessage());
+            throw new Exception("Erreur lors de la création de l'instance de " + modelClass.getName() + " : " + e.getMessage());
         }
     }
 

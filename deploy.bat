@@ -30,6 +30,7 @@ for %%I in ("%LIB_PATH%\*.jar") do (
     set "classpath=!classpath!;"%%I""
 )
 javac -cp "%classpath%" -d "%PROJECT_NAME%\WEB-INF\classes" !javaFiles!
+pause
 
 REM 4. Créer le fichier JAR du Framework
 echo Création du fichier JAR du Framework...

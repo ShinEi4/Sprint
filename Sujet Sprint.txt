@@ -139,4 +139,16 @@ Avant l'url est associé au Classe + action (methode dans @controlleur) mais mai
 S'il y a autre que get et post,on doit lever une exception : methode ou controlleur : @GET @url("/getemp") getEmp .... alors que c'est l' url "getemp" qu'on appelera avec @verb (method)
 POST !!
 
+Sprint 11 :
+Afficher les erreurs dans une page d'erreur
 
+Sprint 12 :
+Objectif : Gerer l'upload de fichier par formulaire (POST)
+Côté Framework :
+    - L'execution de mapping pourra être avec un argument objet
+    - Tester si l'attribut correspond au pattern du fichier
+    - Extraire le nom du part par convention (filename+partname et bytes+partName)
+    - recuperer le part et instancier le nom ou le byte
+Côté Test :
+    Créer un formulaire de upload de fichier
+    Prouver que l'upload est réussi
