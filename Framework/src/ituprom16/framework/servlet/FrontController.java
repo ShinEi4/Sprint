@@ -352,6 +352,17 @@ public class FrontController extends HttpServlet {
             return Integer.parseInt(value);
         } else if (type.equals(Double.class) || type.equals(double.class)) {
             return Double.parseDouble(value);
+        } else if (type.equals(java.sql.Date.class)) {
+            try {
+                // Convertir la chaîne de date (format attendu: YYYY-MM-DD) en java.sql.Date
+                return java.sql.Date.valueOf(value);
+            } catch (IllegalArgumentException e) {
+                validationErrors.add(new ValidationError(
+                    "date", 
+                    "Le format de date doit être YYYY-MM-DD"
+                ));
+                return null;
+            }
         }
         // Ajouter d'autres conversions si nécessaire
         
