@@ -38,6 +38,9 @@ import ituprom16.framework.annotation.Email;
 import ituprom16.framework.annotation.FormUrl;
 import ituprom16.framework.annotation.Auth;
 import ituprom16.framework.annotation.Role;
+import ituprom16.framework.annotation.Redirect;
+import ituprom16.framework.model.RedirectView;
+import javax.servlet.http.HttpSession;
 
 public class FrontController extends HttpServlet {
     private HashMap<String, Mapping> mappingUrls;
@@ -141,21 +144,26 @@ public class FrontController extends HttpServlet {
     
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        validationErrors.clear();  // Réinitialiser les erreurs
+        validationErrors.clear();
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();
         String url = uri.substring(contextPath.length());
-        String requestMethod = request.getMethod();
+        
+        // Utiliser la méthode stockée dans l'attribut si elle existe (pour les redirections)
+        String requestMethod = (String) request.getAttribute("method");
+        if (requestMethod == null) {
+            requestMethod = request.getMethod();
+        }
 
-        // Récupérer le mapping avant tout
+        // Récupérer le mapping
         Mapping mapping = mappingUrls.get(url);
         if (mapping == null) {
             displayError(response, "Aucune méthode n'est associée à l'URL: " + url);
             return;
         }
 
-        // Vérifier la méthode HTTP
-        if (!mapping.getHttpMethod().equals(requestMethod)) {
+        // Pour les redirections, on accepte toujours GET même si la méthode d'origine était POST
+        if (!mapping.getHttpMethod().equals(requestMethod) && !"GET".equals(mapping.getHttpMethod())) {
             displayError(response, "Méthode HTTP incorrecte. L'URL " + url + 
                 " attend " + mapping.getHttpMethod() + " mais a reçu " + requestMethod);
             return;
@@ -222,10 +230,7 @@ public class FrontController extends HttpServlet {
             }
             
             // Vérifier l'authentification
-            if (!checkAuthentication(request, controllerClass, targetMethod)) {
-                response.sendRedirect(request.getContextPath() + "/login");
-                return;
-            }
+            checkAuthentication(request, response, controllerClass, targetMethod);
 
             // Vérifier les rôles
             if (!checkRole(request, controllerClass, targetMethod)) {
@@ -319,22 +324,21 @@ public class FrontController extends HttpServlet {
     private Object handleModelAttribute(Class<?> modelClass, HttpServletRequest request) {
         try {
             Object instance = modelClass.getDeclaredConstructor().newInstance();
+            Field[] fields = modelClass.getDeclaredFields();
             
-            for (Field field : modelClass.getDeclaredFields()) {
-                if (field.isAnnotationPresent(RequestParam.class)) {
-                    RequestParam annotation = field.getAnnotation(RequestParam.class);
-                    String paramName = annotation.name();
-                    if (paramName.isEmpty()) {
-                        paramName = field.getName();
-                    }
-                    
-                    String paramValue = request.getParameter(paramName);
-                    if (paramValue != null) {
-                        field.setAccessible(true);
-                        field.set(instance, convertParamValue(paramValue, field.getType()));
-                    }
+            for (Field field : fields) {
+                field.setAccessible(true);
+                String paramValue = request.getParameter(field.getName());
+                
+                if (paramValue != null && !paramValue.trim().isEmpty()) {
+                    // Conversion des types
+                    Object convertedValue = convertParamValue(paramValue, field.getType());
+                    field.set(instance, convertedValue);
                 }
             }
+            
+            // Valider le modèle après avoir défini toutes les valeurs
+            validateModel(instance);
             
             return instance;
         } catch (Exception e) {
@@ -344,29 +348,72 @@ public class FrontController extends HttpServlet {
     }
 
     private Object convertParamValue(String value, Class<?> type) {
-        if (value == null) return null;
-        
-        if (type.equals(String.class)) {
-            return value;
-        } else if (type.equals(Integer.class) || type.equals(int.class)) {
-            return Integer.parseInt(value);
-        } else if (type.equals(Double.class) || type.equals(double.class)) {
-            return Double.parseDouble(value);
-        } else if (type.equals(java.sql.Date.class)) {
-            try {
-                // Convertir la chaîne de date (format attendu: YYYY-MM-DD) en java.sql.Date
-                return java.sql.Date.valueOf(value);
-            } catch (IllegalArgumentException e) {
-                validationErrors.add(new ValidationError(
-                    "date", 
-                    "Le format de date doit être YYYY-MM-DD"
-                ));
-                return null;
-            }
+        if (value == null || value.trim().isEmpty()) {
+            return null;
         }
-        // Ajouter d'autres conversions si nécessaire
         
-        return value;
+        try {
+            // Conversion String
+            if (type.equals(String.class)) {
+                return value;
+            }
+            
+            // Conversion Integer/int
+            if (type.equals(Integer.class) || type.equals(int.class)) {
+                return Integer.parseInt(value.trim());
+            }
+            
+            // Conversion Double/double
+            if (type.equals(Double.class) || type.equals(double.class)) {
+                return Double.parseDouble(value.trim());
+            }
+            
+            // Conversion java.sql.Date
+            if (type.equals(java.sql.Date.class)) {
+                try {
+                    // Format attendu: YYYY-MM-DD
+                    return java.sql.Date.valueOf(value.trim());
+                } catch (IllegalArgumentException e) {
+                    validationErrors.add(new ValidationError(
+                        "date", 
+                        "Le format de date doit être YYYY-MM-DD"
+                    ));
+                    return null;
+                }
+            }
+            
+            // Conversion java.sql.Timestamp
+            if (type.equals(java.sql.Timestamp.class)) {
+                try {
+                    // Format attendu: YYYY-MM-DD HH:mm:ss ou YYYY-MM-DD HH:mm:ss.SSS
+                    if (value.length() <= 19) {
+                        // Si pas de millisecondes, ajouter .0
+                        value = value.trim() + ".0";
+                    }
+                    return java.sql.Timestamp.valueOf(value.trim());
+                } catch (IllegalArgumentException e) {
+                    validationErrors.add(new ValidationError(
+                        "timestamp", 
+                        "Le format de date/heure doit être YYYY-MM-DD HH:mm:ss"
+                    ));
+                    return null;
+                }
+            }
+            
+            // Si le type n'est pas géré, retourner la valeur brute
+            return value;
+            
+        } catch (NumberFormatException e) {
+            // Erreur de conversion numérique
+            validationErrors.add(new ValidationError(
+                "conversion", 
+                "Erreur de conversion pour la valeur: " + value
+            ));
+            return null;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private void validateField(String fieldName, Object value, Parameter param) {
@@ -480,15 +527,46 @@ public class FrontController extends HttpServlet {
             }
         } 
         else if (result instanceof ModelView) {
-            // Si c'est un ModelView, dispatcher vers l'URL spécifiée
             ModelView modelView = (ModelView) result;
             
-            // Ajouter les données dans la requête
+            // Ajouter les attributs à la requête
             for (Map.Entry<String, Object> entry : modelView.getData().entrySet()) {
                 request.setAttribute(entry.getKey(), entry.getValue());
             }
             
-            // Dispatcher vers l'URL
+            // Vérifier s'il y a des erreurs de validation
+            if (!validationErrors.isEmpty()) {
+                request.setAttribute("validationErrors", validationErrors);
+                
+                // Si c'est une redirection avec RedirectView
+                if (result instanceof RedirectView) {
+                    RedirectView redirectView = (RedirectView) result;
+                    
+                    // Vérifier s'il y a des erreurs de validation
+                    if (!validationErrors.isEmpty()) {
+                        request.setAttribute("validationErrors", validationErrors);
+                        // Forcer la méthode GET pour la redirection d'erreur
+                        request.setAttribute("method", "GET");
+                        response.sendRedirect(request.getContextPath() + redirectView.getErrorRedirectUrl());
+                        return;
+                    }
+                    
+                    // Stocker les données dans la session si useSession est true
+                    if (redirectView.isUseSession()) {
+                        HttpSession session = request.getSession();
+                        for (Map.Entry<String, Object> entry : redirectView.getData().entrySet()) {
+                            session.setAttribute(entry.getKey(), entry.getValue());
+                        }
+                    }
+                    
+                    // Forcer la méthode GET pour la redirection de succès
+                    request.setAttribute("method", "GET");
+                    response.sendRedirect(request.getContextPath() + redirectView.getUrl());
+                    return;
+                }
+            }
+            
+            // Forward normal
             RequestDispatcher dispatcher = request.getRequestDispatcher(modelView.getUrl());
             dispatcher.forward(request, response);
         }
@@ -513,6 +591,59 @@ public class FrontController extends HttpServlet {
         }
     }
 
+    private void validateModel(Object model) {
+        if (model == null) return;
+        
+        Class<?> modelClass = model.getClass();
+        Field[] fields = modelClass.getDeclaredFields();
+        
+        for (Field field : fields) {
+            field.setAccessible(true);
+            try {
+                Object value = field.get(model);
+                
+                // Validation Required
+                if (field.isAnnotationPresent(Required.class)) {
+                    Required required = field.getAnnotation(Required.class);
+                    if (value == null || (value instanceof String && ((String)value).trim().isEmpty())) {
+                        validationErrors.add(new ValidationError(field.getName(), required.message()));
+                        continue;
+                    }
+                }
+                
+                if (value != null) {
+                    // Validation Email
+                    if (field.isAnnotationPresent(Email.class)) {
+                        Email email = field.getAnnotation(Email.class);
+                        if (!EMAIL_PATTERN.matcher(value.toString()).matches()) {
+                            validationErrors.add(new ValidationError(field.getName(), email.message()));
+                        }
+                    }
+                    
+                    // Validation Min
+                    if (field.isAnnotationPresent(Min.class)) {
+                        Min min = field.getAnnotation(Min.class);
+                        double numValue = Double.parseDouble(value.toString());
+                        if (numValue < min.value()) {
+                            validationErrors.add(new ValidationError(field.getName(), min.message()));
+                        }
+                    }
+                    
+                    // Validation Max
+                    if (field.isAnnotationPresent(Max.class)) {
+                        Max max = field.getAnnotation(Max.class);
+                        double numValue = Double.parseDouble(value.toString());
+                        if (numValue > max.value()) {
+                            validationErrors.add(new ValidationError(field.getName(), max.message()));
+                        }
+                    }
+                }
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -525,18 +656,30 @@ public class FrontController extends HttpServlet {
         processRequest(request, response);
     }
 
-    private boolean checkAuthentication(HttpServletRequest request, Class<?> controllerClass, Method method) {
+    private boolean checkAuthentication(HttpServletRequest request, HttpServletResponse response, Class<?> controllerClass, Method method) throws Exception {
         // Vérifier l'annotation au niveau de la classe
         boolean requiresAuth = controllerClass.isAnnotationPresent(Auth.class);
+        String loginUrl = "/auth/test"; // URL par défaut
         
         // L'annotation de méthode surcharge celle de la classe
         if (method.isAnnotationPresent(Auth.class)) {
             requiresAuth = method.getAnnotation(Auth.class).required();
+            loginUrl = method.getAnnotation(Auth.class).loginUrl();
+        } else if (controllerClass.isAnnotationPresent(Auth.class)) {
+            loginUrl = controllerClass.getAnnotation(Auth.class).loginUrl();
         }
         
         if (requiresAuth) {
             MySession session = new MySession(request.getSession());
-            return session.get("user") != null;
+            if (session.get("user") == null) {
+                try {
+                    response.sendRedirect(request.getContextPath() + loginUrl);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return false;
+            }
+            return true;
         }
         return true;
     }
